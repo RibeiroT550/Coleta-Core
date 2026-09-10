@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Teste de conexão com webhook do n8n</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 24px; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.1rem; }
+  #resultado { white-space: pre-wrap; background: #f4f5f7; border: 1px solid #d8dce4; border-radius: 6px; padding: 14px; font-size: 0.82rem; margin-top: 16px; }
+  .ok { color: #15803d; font-weight: 600; }
+  .erro { color: #c20006; font-weight: 600; }
+  input { padding: 6px 10px; font-size: 0.9rem; width: 460px; max-width: 100%; }
+  button { padding: 6px 14px; font-size: 0.9rem; cursor: pointer; }
+</style>
+</head>
+<body>
+  <h1>Teste: este app consegue chamar o webhook do n8n?</h1>
+  <p>Cole a URL de produção do webhook (a que você copiou depois de ativar o workflow):</p>
+  <input type="text" id="urlWebhook" placeholder="https://seu-n8n.dominio.com/webhook/teste-coleta">
+  <button id="btnTestar">Testar conexão</button>
+  <div id="resultado">Aguardando teste…</div>
+
+  <script>
+    document.getElementById('btnTestar').addEventListener('click', async () => {
+      const out = document.getElementById('resultado');
+      const url = document.getElementById('urlWebhook').value.trim();
+      if (!url) { out.textContent = 'Cole a URL do webhook primeiro.'; return; }
+      out.textContent = 'Chamando ' + url + ' ...';
+      out.className = '';
+      try {
+        const resp = await fetch(url, { method: 'GET' });
+        const texto = await resp.text();
+        if (!resp.ok) {
+          out.innerHTML = `<span class="erro">Respondeu, mas com erro HTTP ${resp.status}.</span>\n\n` + texto;
+          return;
+        }
+        out.innerHTML = `<span class="ok">Funcionou! HTTP ${resp.status}.</span>\n\nResposta do n8n:\n` + texto;
+      } catch (e) {
+        out.innerHTML = `<span class="erro">Erro de JavaScript/rede:</span>\n${e.message}\n\n` +
+          `Se a mensagem mencionar CORS, o webhook do n8n precisa permitir chamadas de outra origem ` +
+          `(normalmente configurável nas opções do node Webhook, ou o n8n já libera por padrão — ` +
+          `verifique a versão/configuração da sua instância).`;
+      }
+    });
+  </script>
+</body>
+</html>
