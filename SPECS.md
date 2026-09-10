@@ -476,7 +476,10 @@ o usuário corporativo (2.6).
    `graph.microsoft.com` (API do Microsoft Graph)? Se for self-hosted atrás de um firewall
    restritivo, isso precisa estar liberado (é tráfego para domínio da própria Microsoft, então
    costuma já estar liberado por padrão, mas vale confirmar).
-3. **Onde o app HTML vai rodar**, agora que não depende mais de `localhost`/launcher — volta a
-   fazer sentido considerar hospedar como arquivo local simples (cada operador com sua cópia) ou
-   publicar num link único (GitHub Pages)? Isso não tem mais a complicação de Redirect URI, então
-   a decisão pode ser só sobre praticidade de distribuição/atualização do arquivo.
+
+### 3.6 Decisões fechadas (rodada n8n)
+
+| # | Pergunta | Decisão |
+|---|---|---|
+| 1 | Hospedagem do app (link único) | **OneDrive/SharePoint** — testado e confirmado: um arquivo `.html` compartilhado por link consegue chamar um webhook externo do n8n via `fetch` sem problema de CORS (Teste B, HTTP 200). Não precisa de GitHub Pages nem de mudar a visibilidade do repositório de código. |
+| 2 | Conectividade app → n8n | Confirmada (Teste B). |
