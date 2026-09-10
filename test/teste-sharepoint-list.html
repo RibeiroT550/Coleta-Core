@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Teste de acesso à Lista do SharePoint</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 24px; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.1rem; }
+  #resultado { white-space: pre-wrap; background: #f4f5f7; border: 1px solid #d8dce4; border-radius: 6px; padding: 14px; font-size: 0.82rem; margin-top: 16px; }
+  .ok { color: #15803d; font-weight: 600; }
+  .erro { color: #c20006; font-weight: 600; }
+  input { padding: 6px 10px; font-size: 0.9rem; width: 260px; }
+  button { padding: 6px 14px; font-size: 0.9rem; cursor: pointer; }
+</style>
+</head>
+<body>
+  <h1>Teste: este app consegue ler a Lista do SharePoint?</h1>
+  <p>Nome da Lista a testar (o que você digitou ao criar, ex. "Teste"):</p>
+  <input type="text" id="nomeLista" value="Teste">
+  <button id="btnTestar">Testar leitura</button>
+  <div id="resultado">Aguardando teste…</div>
+
+  <script>
+    document.getElementById('btnTestar').addEventListener('click', async () => {
+      const out = document.getElementById('resultado');
+      const nomeLista = document.getElementById('nomeLista').value.trim();
+      out.textContent = 'Consultando...';
+      out.className = '';
+      try {
+        const url = `_api/web/lists/getbytitle('${encodeURIComponent(nomeLista)}')/items?$top=5`;
+        const resp = await fetch(url, {
+          headers: { 'Accept': 'application/json;odata=verbose' },
+          credentials: 'same-origin'
+        });
+        const texto = await resp.text();
+        if (!resp.ok) {
+          out.innerHTML = `<span class="erro">Falhou (HTTP ${resp.status}).</span>\n\n` + texto;
+          return;
+        }
+        const json = JSON.parse(texto);
+        const itens = json.d && json.d.results ? json.d.results : [];
+        out.innerHTML = `<span class="ok">Funcionou! HTTP ${resp.status}.</span>\n` +
+          `Itens encontrados: ${itens.length}\n\n` +
+          JSON.stringify(itens, null, 2);
+      } catch (e) {
+        out.innerHTML = `<span class="erro">Erro de JavaScript/rede:</span>\n${e.message}\n\n` +
+          `Isso costuma acontecer quando a página não está hospedada no mesmo site do SharePoint ` +
+          `da Lista (erro de CORS), ou quando o navegador bloqueou a chamada.`;
+      }
+    });
+  </script>
+</body>
+</html>
