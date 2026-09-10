@@ -131,48 +131,83 @@ de histórico.
 
 ### 2.0 Premissas confirmadas
 
-- Continua **100% client-side** — sem servidor/backend/banco de dados.
+- Continua **100% client-side** no sentido de "sem servidor de aplicação próprio" — mas a
+  persistência compartilhada passa a ser **o próprio GitHub**, via chamadas diretas da API REST do
+  GitHub feitas pelo navegador (ver 2.1). Não existe um backend nosso: o "servidor" é o GitHub.
 - O template do PDF dos Correios é **fixo** — o parser atual (regex) é a estratégia correta; o
   trabalho aqui é robustez (detectar quando não bateu e avisar claramente), não flexibilização.
 - Múltiplos operadores usam o app **independentemente, ao mesmo tempo**, cada um no seu navegador
   — não é multiusuário com sessão/login, mas **precisa produzir um único conjunto de dados
   consistente no fim do dia**.
-- Todos os operadores têm, localmente, acesso a **uma mesma pasta sincronizada** (OneDrive/
-  SharePoint/rede) — é essa pasta compartilhada que viabiliza "vários navegadores, um dataset".
+- Identificação do operador é o **usuário corporativo** (até 7 caracteres, ex. `RTI1CA`) — não é
+  nome livre nem exige uma segunda camada de autenticação (ver 2.6).
 - Status vindo da planilha dos Correios é **texto livre**, copiado como veio, sem validação contra
   lista fixa.
-- Qualquer operador pode rodar a compilação, sob demanda.
+- Qualquer operador pode rodar a compilação e pode excluir qualquer registro, sob demanda.
 - Toda edição/exclusão em registro já compilado gera evento auditável (quem, quando, o quê).
+- Retenção de snapshots diários: até 60 dias, granularidade diária; acima de 60 dias, mantém-se só
+  o último snapshot de cada mês (ver 2.3.2).
 
-### 2.1 Modelo mental: "eventos" + "compilação" (sem servidor, sem lock real)
+### 2.1 Armazenamento compartilhado: o GitHub como "servidor de dados"
 
-Como não há backend para arbitrar escritas concorrentes, a arquitetura muda de
-**"1 arquivo compartilhado, reescrito por todo mundo"** (modelo atual, frágil) para
-**"cada ação gera um arquivo novo e imutável; um processo de compilação consolida tudo depois"**.
-Isso elimina o cenário de dois navegadores reescrevendo o mesmo CSV ao mesmo tempo: cada operador
-só cria arquivos com nome único, nunca edita o de outro nem o arquivo geral diretamente.
+Você perguntou se dá para ter uma pasta padrão no GitHub para onde os arquivos sobem
+automaticamente — a resposta é **sim, e é o desenho recomendado**, mas com uma ressalva importante
+de expectativa: isso não é "uma pasta que sincroniza sozinha" como o OneDrive faz com o disco.
+É o **próprio app, de dentro do navegador, fazendo chamadas HTTPS para a API do GitHub**
+(`api.github.com`) para ler e gravar arquivos no repositório — não existe um cliente git rodando
+na máquina do operador, nem instalação de nada. Do ponto de vista de quem usa, o efeito é o mesmo
+("os dados vão parar num lugar comum automaticamente"), mas o mecanismo é o app chamando a API, não
+uma sincronização de pasta de disco.
+
+**O que isso exige, na prática:**
+- Um repositório privado dedicado a dados (recomendo **separado** deste `Coleta-Core`, que é só
+  código — ex. `Coleta-Core-Data` — para não misturar o histórico de commits de dados com o de
+  código, e para poder restringir quem acessa cada um). Fica como decisão em aberto no item 2.10.
+- Um **token de acesso** (Personal Access Token do GitHub, com permissão restrita a esse único
+  repositório) configurado uma vez em cada navegador/máquina (guardado em `localStorage` daquele
+  navegador — nunca vai para o repositório de código, nunca é commitado).
+- O repositório de dados **precisa ser privado** — ele vai conter CNPJ, razão social, dados de
+  contato etc.; isso é assumido como requisito, não like-to-have.
+
+**Isso resolve, de graça, dois problemas que antes exigiam solução caseira:**
+1. **Duplicidade/concorrência** (sua pergunta 4): a API do GitHub para criar/atualizar arquivo
+   (`PUT /repos/.../contents/{path}`) exige o `sha` da versão atual do arquivo quando ele já
+   existe; se dois operadores tentam escrever o mesmo arquivo "ao mesmo tempo", o segundo pedido
+   chega com o `sha` antigo e a API **recusa com erro 409/422** — é uma trava otimista de verdade,
+   dada pelo próprio GitHub, não uma convenção de arquivo de lock que pode falhar. Isso substitui
+   por completo a ideia de `coleta_core.lock` da versão anterior desta spec.
+2. **Trilha de auditoria "de graça"**: cada gravação é um commit — o histórico de commits do
+   repositório de dados já é, por si só, um log de tudo que mudou e quando (complementar ao
+   `historicoDeAlteracoes` por registro, ver 2.5).
+
+**Estrutura de arquivos no repositório de dados** (mesmo desenho de antes, só troca "pasta local"
+por "caminho dentro do repo Git", lido/escrito via API):
 
 ```
-/coleta-core-data/                          (pasta sincronizada — raiz configurada uma vez por operador)
-├── eventos/
-│   ├── pendentes/
-│   │   ├── 2026-09-10T14-32-01_create_<uuid>.json
-│   │   ├── 2026-09-10T15-01-09_status-batch_<uuid>.json
-│   │   ├── 2026-09-10T16-40-22_update_<uuid>.json
-│   │   └── 2026-09-10T17-05-00_delete_<uuid>.json
-│   └── processados/
-│       └── … (mesmos arquivos, movidos para cá após entrarem numa compilação)
-├── historico/
-│   ├── historico_2026-09-09.json     (snapshot fechado do dia 9: base do dia + eventos do dia 9)
-│   ├── historico_2026-09-10.json     (snapshot do dia 10 = historico_2026-09-09 + eventos processados do dia 10)
-│   └── historico_atual.json          (cópia do snapshot mais recente — é o que Consulta/Dashboard leem)
-└── coleta_core.lock                  (arquivo de trava temporária durante uma compilação)
+eventos/
+├── pendentes/
+│   ├── create_<uuid>.json
+│   ├── status-batch_<uuid>.json
+│   ├── update_<uuid>.json
+│   └── delete_<uuid>.json
+└── processados/
+    └── … (mesmos arquivos, movidos para cá após compilação — só até expirarem, ver 2.3.2)
+historico/
+├── historico_2026-09-09.json     (snapshot fechado do dia 9)
+├── historico_2026-09-10.json     (snapshot do dia 10 = dia 9 + eventos processados do dia 10)
+└── historico_atual.json          (cópia do snapshot mais recente — é o que Consulta/Dashboard leem)
 ```
 
-Cada tipo de evento é um arquivo JSON pequeno, versionado no nome pelo timestamp + UUID, com um
-`tipo` e um `payload`. Nenhum operador escreve no `historico_atual.json` diretamente — apenas o
-processo de **Compilar** (rodado por qualquer operador, botão "Compilar agora") lê os eventos
-pendentes + o snapshot mais recente e produz o próximo snapshot.
+O nome de cada evento usa o **`id` da coleta (ou um UUID próprio do evento)** como parte do nome —
+não mais o timestamp como prefixo — porque criar um arquivo com nome que já existe também falha
+na API do GitHub (sem `sha`, a API assume que é criação e recusa se já houver algo lá), o que dá
+uma segunda camada de proteção contra duplicar a mesma captura duas vezes (ex. duplo clique em
+"Salvar").
+
+Cada tipo de evento é um arquivo JSON pequeno, com um `tipo` e um `payload`. Nenhum operador
+escreve em `historico_atual.json` diretamente — apenas o processo de **Compilar** (rodado por
+qualquer operador, botão "Compilar agora") lê os eventos pendentes + o snapshot mais recente e
+produz o próximo snapshot.
 
 **Tipos de evento:**
 | Tipo | Gerado quando | Conteúdo |
@@ -229,32 +264,44 @@ resolve a lacuna identificada em 1.8 (item↔volume sem ligação real) e permit
 ### 2.3 Fluxo de compilação ("Compilar agora")
 
 1. Operador clica "Compilar agora" (disponível nas duas telas, com indicador de quantos eventos
-   pendentes existem na pasta).
-2. App tenta criar `coleta_core.lock` (com timestamp + quem está compilando). Se o lock já existir
-   e tiver menos de N minutos, avisa "Compilação em andamento por <quem>, tente novamente em
-   instantes" e aborta — mitigação best-effort (não é um lock distribuído de verdade, mas cobre o
-   caso comum de dois cliques quase simultâneos).
-3. Lê `historico_atual.json` (ou o snapshot mais recente em `historico/`) como base.
-4. Lista os arquivos em `eventos/pendentes/`, ordena por timestamp do nome, aplica em ordem:
+   pendentes existem, obtido listando `eventos/pendentes/` via API).
+2. App lê `historico_atual.json` via API — a resposta traz o conteúdo **e o `sha`** atual do
+   arquivo (isso é o que viabiliza a trava otimista do passo 5).
+3. Lista os arquivos em `eventos/pendentes/`, aplica em ordem determinística (ex. por nome/`id`):
    - `create` → adiciona registro (por `id`).
    - `update` → aplica patch no registro existente por `id` (se o `id` não existir mais — ex.
      evento de outra fonte — loga como inconsistência, não quebra a compilação).
    - `delete` → marca `excluido: true` no registro por `id`.
    - `status-batch` → para cada item da lista, localiza o volume pelo `codigoRastreio` em
      qualquer coleta e atualiza `status`/`statusAtualizadoEm`.
-5. Escreve o novo `historico/historico_<AAAA-MM-DD>.json` (snapshot do dia corrente) e atualiza
-   `historico_atual.json`.
-6. Move os eventos aplicados de `pendentes/` para `processados/` (mantém trilha de auditoria e
-   permite reprocessar/depurar se algo parecer errado).
-7. Remove o `coleta_core.lock`.
-8. Compilação é **idempotente por `id` de evento**: se um evento já está em `processados/`, é
-   ignorado mesmo que apareça de novo em `pendentes/` (proteção extra contra reprocessamento).
+4. Escreve o novo `historico/historico_<AAAA-MM-DD>.json` e faz `PUT` em `historico_atual.json`
+   **enviando o `sha` lido no passo 2**.
+   - Se o `PUT` for aceito → segue para o passo 5.
+   - Se o GitHub recusar por `sha` desatualizado (**outra compilação terminou primeiro**) → o app
+     **recomeça do passo 2** automaticamnte (relê o snapshot já atualizado por essa outra
+     compilação, filtra os eventos que ela já processou — via a lista de `processados/` que ela já
+     moveu — e tenta de novo só com o que sobrou). Isso é concorrência real, não best-effort.
+5. Move os eventos aplicados de `pendentes/` para `processados/` (um `DELETE` + `PUT` por arquivo,
+   ou um único commit multi-arquivo via a API de Git Trees, para não gerar dezenas de commits
+   pequenos).
+6. Compilação é **idempotente por nome de arquivo de evento**: se o arquivo já não existe mais em
+   `pendentes/` (outra compilação já o moveu), é ignorado silenciosamente.
 
-> Observação de risco a registrar: como não é um lock distribuído real, uma corrida entre duas
-> compilações quase simultâneas ainda é teoricamente possível (ex. duas pessoas passam pelo
-> "arquivo não existe ainda" ao mesmo tempo antes do primeiro `write` do lock). Como a sincronização
-> (OneDrive/SharePoint) tem sua própria latência, aceitar esse risco residual é razoável para o
-> volume de uso esperado, mas deve ficar documentado — não é uma garantia forte de exclusão mútua.
+### 2.3.2 Retenção dos snapshots diários
+
+Regra definida: **até 60 dias, mantém-se 1 snapshot por dia; acima de 60 dias, mantém-se apenas o
+último snapshot de cada mês** (ex.: só sobra `historico_2026-07-31.json` para julho, os demais dias
+de julho são apagados assim que a janela de 60 dias os ultrapassa).
+
+Importante: isso **não apaga nenhuma coleta dos dados vivos** — `historico_atual.json` é sempre
+cumulativo e continua tendo todos os registros desde o início, independentemente da idade. O que é
+podado são as **cópias intermediárias** em `historico/`, que servem só como pontos de restauração/
+auditoria de "como estava o dado neste dia específico". Rotina sugerida: a cada compilação, depois
+de escrever o snapshot do dia, o app verifica se há snapshots com mais de 60 dias que não sejam o
+último dia do seu mês, e os remove (via API, um `DELETE` por arquivo).
+Os eventos em `eventos/processados/` podem seguir a mesma regra de expurgo (60 dias), já que uma
+vez compilados, sua informação de auditoria já está preservada em `historicoDeAlteracoes` dentro do
+próprio registro (ver 2.5) — o arquivo de evento bruto não é mais a única cópia dessa informação.
 
 ### 2.4 Atualização de status via planilha dos Correios
 
@@ -287,14 +334,15 @@ resolve a lacuna identificada em 1.8 (item↔volume sem ligação real) e permit
 
 ### 2.6 Identificação do operador
 
-Necessário para autoria dos eventos (`criadoPor`, auditoria de `update`/`delete`). Sem login/
-autenticação real (fora de escopo, é client-side puro), a proposta mínima:
-- Na primeira abertura do app (por navegador/máquina), pedir "Seu nome" uma vez e guardar em
-  `localStorage` — reaproveitado em todos os eventos daquela máquina/perfil.
-- Sem validação forte de identidade (é um app sem backend); serve para rastreabilidade
-  operacional, não para controle de acesso.
-- **Em aberto**: definir se isso é só um nome livre ou uma lista fixa de operadores conhecidos
-  (select) — impacta consistência dos relatórios "por operador", se vierem a existir.
+Autoria dos eventos (`criadoPor`, auditoria de `update`/`delete`) usa o **usuário corporativo** do
+operador — até 7 caracteres alfanuméricos, ex. `RTI1CA`:
+- Na primeira abertura do app (por navegador/máquina), pede o usuário corporativo, valida o
+  formato (alfanumérico, máx. 7 caracteres, normalizado para maiúsculas) e guarda em
+  `localStorage` — reaproveitado em todos os eventos daquela máquina/perfil, sem pedir de novo.
+- Tela de configuração permite trocar o usuário salvo (ex. máquina compartilhada entre turnos).
+- Não é autenticação (não há senha nem verificação contra um diretório corporativo) — é só
+  identificação para rastreabilidade; o controle de acesso real de quem pode usar o app é dado
+  pelo token do GitHub configurado na máquina (ver 2.1), não por este campo.
 
 ### 2.7 Dashboard
 
@@ -327,22 +375,35 @@ Tela nova, alimentada por `historico_atual.json` (mesma leitura da Consulta):
 - Adicionar validação leve pós-parse: nº de volumes somados por NF bate com `Quantidade total de
   Volumes`; CNPJ tem 14 dígitos; alertar (não bloquear) divergências antes de salvar.
 
-### 2.10 Perguntas ainda em aberto
+### 2.10 Decisões já fechadas (rodada 2)
 
-Estas precisam de resposta antes de detalhar as telas/eventos por completo:
+| # | Pergunta | Decisão |
+|---|---|---|
+| 1 | Pasta compartilhada | **GitHub como storage**, via chamadas de API do navegador a um repositório de dados privado (ver 2.1) — não é sincronização de pasta local. |
+| 2 | Identificação do operador | Usuário corporativo, até 7 caracteres (ex. `RTI1CA`) — ver 2.6. |
+| 4 | Duplicidade / concorrência na compilação | Resolvida pela trava otimista nativa da API do GitHub (`sha` em `PUT`) — sem lock caseiro (ver 2.3). |
+| 5 | Quem pode excluir | Qualquer operador, por ora. |
+| 6 | Retenção dos snapshots | 60 dias em granularidade diária; acima disso, só o último snapshot de cada mês (ver 2.3.2). |
 
-1. **Configuração da pasta compartilhada**: cada operador seleciona a pasta raiz uma vez (via
-   `showDirectoryPicker`, guardado no IndexedDB daquele navegador) — confirma esse modelo, ou deve
-   haver um caminho fixo sugerido/documentado para toda a equipe usar?
-2. **Operador**: nome livre ou lista fixa de operadores (select) para consistência de relatórios?
-3. **Excel de status dos Correios**: quais colunas exatamente vêm nessa planilha (nomes de coluna
-   reais, mesmo que variem) — preciso de um exemplo ou de uma planilha real para desenhar o
-   autodetect de colunas com precisão (hoje só tenho a suposição `codigoRastreio` + `status` +
+### 2.11 Perguntas ainda em aberto
+
+1. **Excel de status dos Correios** *(bloqueado — aguardando template)*: quais colunas exatamente
+   vêm nessa planilha (nomes reais das colunas) — assim que houver um exemplo, desenho o
+   autodetect de colunas com precisão (hoje é só a suposição `codigoRastreio` + `status` +
    `dataStatus`).
-4. **Frequência/gatilho de compilação**: além do botão manual "Compilar agora", faz sentido também
-   compilar automaticamente ao entrar na tela de Consulta/Dashboard (silenciosamente, sem exigir
-   clique), já que qualquer operador pode compilar?
-5. **Exclusão**: quem pode excluir um registro — qualquer operador, ou deve existir algum nível de
-   permissão (ex. só quem criou, ou um papel "admin") mesmo sem login formal?
-6. **Retenção**: os snapshots diários em `historico/` (um arquivo por dia, para sempre) devem ter
-   algum limite/expurgo, ou ficam todos indefinidamente como trilha de auditoria?
+2. **Nome e local do repositório de dados**: crio um repositório novo (ex.
+   `RibeiroT550/Coleta-Core-Data`), separado deste `Coleta-Core` (que fica só com o código do app)?
+   Confirma o nome, ou prefere outro esquema (ex. uma branch separada dentro do mesmo repo — viável,
+   mas mistura menos bem com o histórico de código)?
+3. **Token de acesso ao GitHub**: cada operador vai gerar seu próprio Personal Access Token
+   (com escopo restrito só ao repositório de dados) e colar uma vez na tela de configuração do app,
+   ou existe preferência por outro mecanismo (ex. um único token "de serviço" compartilhado entre
+   todos, mais simples de configurar porém com rastreabilidade de autoria só via o campo
+   `criadoPor`, não via autor do commit)?
+4. **Gatilho de compilação**: além do botão manual "Compilar agora", faz sentido compilar também
+   automaticamente ao entrar na tela de Consulta/Dashboard (silenciosamente, sem exigir clique)?
+5. **Limite de tamanho do repositório/arquivo**: `historico_atual.json` cresce para sempre (é
+   cumulativo). A API do GitHub tem um limite prático de ~100 MB por arquivo — em volume normal de
+   uso isso deve levar anos para ser um problema, mas vale confirmar se há uma expectativa de
+   volume diário (quantas coletas/dia, em média) para eu estimar quando isso viraria uma
+   preocupação real e se precisamos paginar/particionar o histórico antes disso.
