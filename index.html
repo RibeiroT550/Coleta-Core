@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Coletas · Correios · Bosch</title>
+<style>
+/* ================================================================
+   STYLE — Controle de Coletas Correios · Bosch Automotive
+   Design tokens e componentes reaproveitados de portal-coleta-v9.
+   ================================================================ */
+
+:root {
+  --bosch-red:       #ed0007;
+  --bosch-red-dark:  #c20006;
+  --color-white:     #ffffff;
+  --color-bg:        #f4f5f7;
+  --color-header:    #ffffff;
+  --color-navbar:    #e2e5ea;
+  --color-border:    #d8dce4;
+  --color-card:      #ffffff;
+  --color-text:      #1a1c23;
+  --color-text-muted:#5c6070;
+  --color-text-light:#9198a8;
+  --color-input-bg:  #f8f9fb;
+  --shadow-xs:  0 1px 3px rgba(0,0,0,0.06);
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.07);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.09);
+  --shadow-focus: 0 0 0 3px rgba(237,0,7,0.12);
+  --gradient-h:  6px;
+  --header-h:    68px;
+  --navbar-h:    46px;
+  --total-top:   calc(var(--gradient-h) + var(--header-h) + var(--navbar-h));
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --transition:  0.2s ease;
+  --font-main:   'Aptos', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font-main);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+input, select, textarea { font-family: inherit; }
+h1,h2,h3,h4 { font-family: var(--font-main); font-weight: 600; line-height: 1.25; color: var(--color-text); }
+h2 { font-size: 1.05rem; }
+h3 { font-size: 0.95rem; }
+p  { font-size: 0.875rem; color: var(--color-text-muted); }
+
+/* ── Header ── */
+#site-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background-color: var(--color-header);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
+}
+.header-gradient-strip {
+  width: 100%; height: var(--gradient-h);
+  background: linear-gradient(90deg, #8f2540, #6a2f6f, #312a6f, #024995, var(--bosch-red));
+}
+.header-main {
+  display: flex; align-items: center; justify-content: space-between;
+  height: var(--header-h); padding: 0 28px; gap: 20px;
+}
+.header-left { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.header-logo { flex-shrink: 0; }
+.header-logo svg { height: 42px; width: auto; display: block; }
+.header-divider { width: 1px; height: 32px; background: var(--color-border); flex-shrink: 0; }
+.header-title { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.header-title-line1 { font-size: 1.08rem; font-weight: 700; color: var(--color-text); line-height: 1.2; white-space: nowrap; }
+.header-title-line2 { font-size: 0.78rem; font-weight: 400; color: var(--color-text-muted); line-height: 1.2; white-space: nowrap; }
+
+/* ── Navbar ── */
+#main-nav {
+  position: fixed; top: calc(var(--gradient-h) + var(--header-h)); left: 0; right: 0; z-index: 90;
+  height: var(--navbar-h); background-color: var(--color-navbar);
+  border-bottom: 1px solid var(--color-border); box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.nav-container { display: flex; align-items: stretch; height: 100%; padding: 0 28px; }
+.nav-item {
+  display: inline-flex; align-items: center; gap: 7px; padding: 0 18px;
+  font-size: 0.84rem; font-weight: 500; color: var(--color-text-muted);
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; transition: color var(--transition), background-color var(--transition), border-color var(--transition);
+  white-space: nowrap;
+}
+.nav-item .nav-icon { opacity: 0.7; transition: opacity var(--transition); }
+.nav-item:hover { color: var(--color-text); background-color: rgba(255,255,255,0.5); }
+.nav-item:hover .nav-icon { opacity: 1; }
+.nav-item.active { color: var(--color-text); font-weight: 600; border-bottom-color: var(--bosch-red); background-color: rgba(255,255,255,0.6); }
+.nav-item.active .nav-icon { opacity: 1; }
+.nav-separator { width: 1px; background-color: var(--color-border); margin: 10px 4px; }
+
+/* ── Conteúdo principal ── */
+#main-content { margin-top: var(--total-top); padding: 28px 28px 60px; }
+.content-container { max-width: 1040px; margin: 0 auto; }
+.page-section { display: none; }
+.page-section.active { display: block; animation: sectionFadeIn 0.2s ease; }
+@keyframes sectionFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.section-page-title { margin-bottom: 24px; }
+.section-page-title h2 { font-size: 1.15rem; font-weight: 700; color: var(--color-text); margin-bottom: 3px; }
+.section-page-title p { font-size: 0.82rem; color: var(--color-text-muted); }
+.section-page-title::after { content: ''; display: block; width: 28px; height: 2px; background-color: var(--bosch-red); margin-top: 10px; border-radius: 1px; }
+
+/* ── Cards ── */
+.form-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); margin-bottom: 20px; overflow: hidden; }
+.form-card-header { display: flex; align-items: center; gap: 12px; padding: 16px 22px; background: #fafbfc; border-bottom: 1px solid var(--color-border); }
+.form-card-icon { width: 34px; height: 34px; border-radius: var(--radius-sm); background: #f0f1f4; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--color-text-muted); }
+.form-card-icon.blue { background: #e6f4fb; color: #007BC0; }
+.form-card-header-text h3 { font-size: 0.92rem; font-weight: 600; color: var(--color-text); }
+.form-card-header-text p { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 1px; }
+.form-card-body { padding: 22px; }
+
+/* ── Barra de conexões (histórico / cadastro) ── */
+.conn-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.conn-card {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  background: var(--color-white); border: 1.5px solid var(--color-border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+}
+.conn-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); background: #f0f1f4; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--color-text-muted); }
+.conn-info { flex: 1; min-width: 0; }
+.conn-label { font-size: 0.82rem; font-weight: 600; color: var(--color-text); }
+.conn-status { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; margin-top: 2px; }
+.conn-status .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.conn-status.off { color: var(--color-text-light); }
+.conn-status.on  { color: #16a34a; }
+.conn-status.warn{ color: #b45309; }
+
+/* ── Campos ── */
+.form-grid { display: grid; gap: 16px; }
+.form-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+.form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.col-span-2 { grid-column: span 2; }
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.field-label .required { color: var(--bosch-red); margin-left: 2px; }
+.field-input, .field-select {
+  height: 38px; padding: 0 12px; background: var(--color-input-bg);
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);
+  font-size: 0.875rem; color: var(--color-text); width: 100%;
+  transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition);
+}
+.field-input:focus, .field-select:focus { outline: none; border-color: var(--bosch-red); box-shadow: var(--shadow-focus); background-color: var(--color-white); }
+.field-input.auto-filled { background-color: #f0f6ff; border-color: #007BC0; color: #005f94; }
+.field-input::placeholder { color: var(--color-text-light); }
+.field-input:disabled { background: #f0f1f4; color: var(--color-text-muted); cursor: not-allowed; }
+.field-hint { font-size: 0.72rem; color: var(--color-text-light); margin-top: 1px; }
+
+/* ── Upload PDF (drag-and-drop) ── */
+.upload-zone {
+  border: 2px dashed var(--color-border); border-radius: var(--radius-md); padding: 32px 20px;
+  text-align: center; cursor: pointer; transition: border-color var(--transition), background-color var(--transition);
+  position: relative; background: var(--color-input-bg); user-select: none;
+}
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--bosch-red); background-color: #fff8f8; }
+.upload-zone.has-file { border-color: #007BC0; border-style: solid; background-color: #f0f6ff; }
+.upload-prompt { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+.upload-prompt-icon { width: 44px; height: 44px; border-radius: 50%; background: #f0f1f4; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; color: var(--color-text-muted); transition: background-color var(--transition); }
+.upload-zone:hover .upload-prompt-icon, .upload-zone.dragover .upload-prompt-icon { background: #ffe8e8; color: var(--bosch-red); }
+.upload-prompt-label { font-size: 0.86rem; font-weight: 600; color: var(--color-text); }
+.upload-prompt-sub { font-size: 0.75rem; color: var(--color-text-muted); }
+.upload-prompt-link { font-size: 0.78rem; font-weight: 600; color: var(--bosch-red); text-decoration: underline; text-underline-offset: 2px; pointer-events: auto; }
+.upload-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-notice {
+  display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; margin-bottom: 16px;
+  background: #f8f9fb; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  font-size: 0.78rem; color: var(--color-text-muted); line-height: 1.5;
+}
+.upload-notice svg { flex-shrink: 0; margin-top: 1px; color: #64748b; }
+
+/* ── Tabela de NFs (coleta/rastreio) ── */
+.nf-table-wrap { overflow-x: auto; }
+.nf-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.nf-table thead tr { background: #f0f6fb; border-bottom: 2px solid #007BC0; }
+.nf-table th { padding: 10px 12px; font-size: 0.72rem; font-weight: 700; color: var(--color-text); text-align: left; white-space: nowrap; }
+.nf-table td { padding: 8px 12px; border-bottom: 1px solid #eaecf0; vertical-align: middle; }
+.nf-table input.field-input { height: 34px; font-size: 0.82rem; }
+.btn-icon-remove {
+  width: 26px; height: 26px; border-radius: 50%; border: none; background: #fee2e2; color: var(--bosch-red);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: background var(--transition); font-size: 0.8rem;
+}
+.btn-icon-remove:hover { background: var(--bosch-red); color: #fff; }
+.nf-empty { text-align: center; padding: 24px; color: var(--color-text-light); font-size: 0.82rem; font-style: italic; }
+
+/* ── Botões ── */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 20px; font-family: var(--font-main); font-size: 0.84rem; font-weight: 600; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: background-color var(--transition), box-shadow var(--transition); letter-spacing: 0.01em; white-space: nowrap; }
+.btn svg { flex-shrink: 0; }
+.btn-primary { background: #007BC0; color: #fff; }
+.btn-primary:hover { background: #005f94; }
+.btn-primary:disabled { background: #d1d5db; color: #9ca3af; cursor: not-allowed; pointer-events: none; box-shadow: none; }
+.btn-secondary { background: var(--color-white); color: var(--color-text); border: 1.5px solid var(--color-border); }
+.btn-secondary:hover { background: #f4f5f7; border-color: #b0b8c8; }
+.btn-ghost { background: transparent; color: var(--color-text-muted); border: 1.5px solid transparent; }
+.btn-ghost:hover { background: #f0f1f4; color: var(--color-text); }
+.btn-sm { padding: 6px 14px; font-size: 0.78rem; }
+.step-nav { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+
+/* ── Alertas inline ── */
+.alert-box { display: none; margin: 14px 0; padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.82rem; line-height: 1.5; }
+.alert-box.visible { display: block; }
+.alert-box.info    { background: #e6f4fb; color: #005f94; border: 1px solid #99d0ee; }
+.alert-box.success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.alert-box.warn    { background: #fff4e5; color: #92400e; border: 1px solid #fcd34d; }
+.alert-box.error   { background: #fef2f2; color: var(--bosch-red-dark); border: 1px solid #fca5a5; }
+
+/* ── Texto bruto extraído (debug) ── */
+details.raw-text { margin-top: 12px; }
+details.raw-text summary { cursor: pointer; font-size: 0.78rem; color: var(--color-text-muted); font-weight: 600; }
+details.raw-text pre {
+  margin-top: 8px; max-height: 220px; overflow: auto; padding: 12px; background: #0f1117; color: #d7dae0;
+  border-radius: var(--radius-sm); font-size: 0.72rem; white-space: pre-wrap; word-break: break-word;
+}
+
+/* ── Consulta / Histórico ── */
+.hist-filters { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.hist-search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 360px; }
+.hist-search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--color-text-muted); pointer-events: none; }
+.hist-search { width: 100%; height: 36px; padding: 0 12px 0 36px; font-size: 0.84rem; color: var(--color-text); background: var(--color-white); border: 1.5px solid var(--color-border); border-radius: 20px; outline: none; transition: border-color var(--transition); }
+.hist-search:focus { border-color: #007BC0; }
+.hist-count { margin-left: auto; font-size: 0.78rem; color: var(--color-text-muted); white-space: nowrap; }
+.hist-table-wrap { overflow-x: auto; }
+.hist-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.hist-table thead tr { background: #f0f6fb; border-bottom: 2px solid #007BC0; }
+.hist-table th { padding: 10px 14px; font-size: 0.71rem; font-weight: 700; color: var(--color-text); text-align: left; white-space: nowrap; }
+.hist-table tbody tr { border-bottom: 1px solid #eaecf0; }
+.hist-table tbody tr:hover { background: #f8fafc; }
+.hist-table td { padding: 10px 14px; color: var(--color-text); vertical-align: middle; white-space: nowrap; }
+.hist-td-rastreio { font-family: 'Courier New', monospace; font-size: 0.78rem; color: #007BC0; }
+.hist-empty { text-align: center; padding: 56px 24px; color: var(--color-text-muted); }
+.hist-empty svg { margin: 0 auto 14px; display: block; opacity: 0.3; }
+
+/* ── Modal de mapeamento de colunas ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,17,23,0.45); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: var(--color-white); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); width: 100%; max-width: 520px; max-height: 86vh; overflow-y: auto; }
+.modal-header { padding: 18px 22px; border-bottom: 1px solid var(--color-border); }
+.modal-header h3 { font-size: 1rem; }
+.modal-header p { font-size: 0.78rem; margin-top: 3px; }
+.modal-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer { padding: 16px 22px; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ── Utilitários ── */
+.text-muted { color: var(--color-text-muted); }
+.mt-16 { margin-top: 16px; }
+.flex-1 { flex: 1; }
+@media (max-width: 900px) {
+  .conn-bar { grid-template-columns: 1fr; }
+  .form-grid.cols-3, .form-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .header-title-line2 { display: none; }
+  .form-grid.cols-2, .form-grid.cols-3, .form-grid.cols-4 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header id="site-header">
+  <div class="header-gradient-strip" aria-hidden="true"></div>
+  <div class="header-main">
+    <div class="header-left">
+      <div class="header-logo" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560.2 223.6" style="height:42px;width:auto;">
+          <rect width="560.2" height="223.6" style="fill:none"/>
+          <path d="M248.8,110.3a13.766,13.766,0,0,0,8.8-13c0-11.7-8.3-17.5-19.7-17.5H208v63.6h32.5c10,0,19.8-7,19.8-17.7C260.3,113,248.8,110.4,248.8,110.3ZM223.6,93h11.6a5.669,5.669,0,0,1,6,6,5.927,5.927,0,0,1-6.3,5.8H223.6V93Zm11.7,37.1H223.6V117.6H235c5.7,0,8.4,2.5,8.4,6.2C243.4,128.4,240,130.1,235.3,130.1Z" style="fill:#ed0007;fill-rule:evenodd"/>
+          <path d="M294.7,78.2c-18.4,0-29.2,14.7-29.2,33.3,0,18.7,10.8,33.3,29.2,33.3,18.5,0,29.2-14.6,29.2-33.3C323.9,92.9,313.2,78.2,294.7,78.2Zm0,51.4c-9,0-13.5-8.1-13.5-18.1s4.5-18,13.5-18,13.6,8.1,13.6,18C308.3,121.6,303.7,129.6,294.7,129.6Z" style="fill:#ed0007;fill-rule:evenodd"/>
+          <path d="M357.8,104.8l-2.2-.5c-5.4-1.1-9.7-2.5-9.7-6.4,0-4.2,4.1-5.9,7.7-5.9a17.894,17.894,0,0,1,13,5.9l9.9-9.8c-4.5-5.1-11.8-10-23.2-10-13.4,0-23.6,7.5-23.6,20,0,11.4,8.2,17,18.2,19.1l2.2.5c8.3,1.7,11.4,3,11.4,7,0,3.8-3.4,6.3-8.6,6.3-6.2,0-11.8-2.7-16.1-8.2l-10.1,10c5.6,6.7,12.7,11.9,26.4,11.9,11.9,0,24.6-6.8,24.6-20.7C377.9,109.5,366.9,106.7,357.8,104.8Z" style="fill:#ed0007;fill-rule:evenodd"/>
+          <path d="M413.3,129.6c-7,0-14.3-5.8-14.3-18.5,0-11.3,6.8-17.6,13.9-17.6,5.6,0,8.9,2.6,11.5,7.1l12.8-8.5c-6.4-9.7-14-13.8-24.5-13.8-19.2,0-29.6,14.9-29.6,32.9,0,18.9,11.5,33.7,29.4,33.7,12.6,0,18.6-4.4,25.1-13.8l-12.9-8.7C422.1,126.6,419.3,129.6,413.3,129.6Z" style="fill:#ed0007;fill-rule:evenodd"/>
+          <polygon points="479.9 79.8 479.9 103.2 460.6 103.2 460.6 79.8 443.9 79.8 443.9 143.4 460.6 143.4 460.6 118.3 479.9 118.3 479.9 143.4 496.6 143.4 496.6 79.8 479.9 79.8" style="fill:#ed0007;fill-rule:evenodd"/>
+          <path d="M111.8,63.6A48.2,48.2,0,1,0,160,111.8,48.226,48.226,0,0,0,111.8,63.6Zm0,91.9a43.7,43.7,0,1,1,43.7-43.7A43.745,43.745,0,0,1,111.8,155.5Z"/>
+          <path d="M131.7,81.7h-3.3V98.2H95.3V81.7H91.9a36.063,36.063,0,0,0,0,60.2h3.4V125.4h33.1v16.5h3.3a36.063,36.063,0,0,0,0-60.2Zm-41,53.7a31.572,31.572,0,0,1,0-47.2Zm37.7-14.6H95.3V102.7h33.1Zm4.5,14.5v-10h0V98.2h0v-10a31.66,31.66,0,0,1,0,47.1Z"/>
+        </svg>
+      </div>
+      <div class="header-divider" aria-hidden="true"></div>
+      <div class="header-title">
+        <span class="header-title-line1">Controle de Coletas</span>
+        <span class="header-title-line2">Correios · Devolução Diesel</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav id="main-nav" aria-label="Navegação principal">
+  <div class="nav-container">
+    <button class="nav-item active" data-section="captura">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+      </svg>
+      Nova Captura
+    </button>
+    <div class="nav-separator" aria-hidden="true"></div>
+    <button class="nav-item" data-section="consulta">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      Consulta e Histórico
+    </button>
+  </div>
+</nav>
+
+<main id="main-content">
+<div class="content-container">
+
+  <!-- ═══════════════ SEÇÃO: NOVA CAPTURA ═══════════════ -->
+  <section id="section-captura" class="page-section active">
+
+    <div class="section-page-title">
+      <h2>Nova captura de coleta</h2>
+      <p>Arraste o PDF da solicitação, confira os dados e registre o(s) número(s) de coleta e rastreio.</p>
+    </div>
+
+    <!-- Barra de conexão: histórico + cadastro -->
+    <div class="conn-bar">
+      <div class="conn-card">
+        <div class="conn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="conn-info">
+          <div class="conn-label">Arquivo de histórico</div>
+          <div class="conn-status off" id="statusHistorico"><span class="dot"></span>Não conectado</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnConectarHistorico">Conectar</button>
+      </div>
+      <div class="conn-card">
+        <div class="conn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+          </svg>
+        </div>
+        <div class="conn-info">
+          <div class="conn-label">Base de cadastro (Excel)</div>
+          <div class="conn-status off" id="statusCadastro"><span class="dot"></span>Não carregada</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnConectarCadastro">Carregar</button>
+      </div>
+    </div>
+
+    <!-- Card: upload do PDF -->
+    <div class="form-card">
+      <div class="form-card-header">
+        <div class="form-card-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="form-card-header-text">
+          <h3>PDF da Solicitação de Coleta</h3>
+          <p>Arraste o "Resumo da Solicitação" exportado para extrair os dados automaticamente.</p>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="upload-zone" id="pdfZone" role="button" tabindex="0" aria-label="Área de upload do PDF">
+          <input type="file" class="upload-input" id="pdfInput" accept=".pdf">
+          <div class="upload-prompt" id="pdfPrompt">
+            <div class="upload-prompt-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
+                <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+              </svg>
+            </div>
+            <div class="upload-prompt-label" id="pdfPromptLabel">Arraste o PDF aqui ou clique para selecionar</div>
+            <div class="upload-prompt-sub" id="pdfPromptSub">Apenas arquivos .pdf</div>
+          </div>
+        </div>
+        <div class="alert-box info" id="pdfExtractStatus"></div>
+        <details class="raw-text" id="rawTextBox" style="display:none;">
+          <summary>Ver texto bruto extraído do PDF (conferência manual)</summary>
+          <pre id="rawTextContent"></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Card: dados extraídos / cliente -->
+    <div class="form-card" id="dadosCard" style="display:none;">
+      <div class="form-card-header">
+        <div class="form-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          </svg>
+        </div>
+        <div class="form-card-header-text">
+          <h3>Dados da Empresa</h3>
+          <p>Campos em azul foram preenchidos automaticamente (PDF/cadastro) · edite se necessário.</p>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="form-grid cols-3">
+          <div class="field-group col-span-2">
+            <label class="field-label">Razão Social</label>
+            <input type="text" class="field-input" id="fEmpresa" placeholder="Razão Social">
+          </div>
+          <div class="field-group">
+            <label class="field-label">CNPJ</label>
+            <input type="text" class="field-input" id="fCnpj" placeholder="00.000.000/0000-00">
+          </div>
+        </div>
+        <div class="form-grid cols-3 mt-16">
+          <div class="field-group">
+            <label class="field-label">Cidade</label>
+            <input type="text" class="field-input" id="fCidade" placeholder="Cidade">
+          </div>
+          <div class="field-group">
+            <label class="field-label">UF</label>
+            <input type="text" class="field-input" id="fUf" placeholder="UF" maxlength="2">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Categoria de Cliente</label>
+            <input type="text" class="field-input" id="fCategoria" placeholder="Categoria">
+          </div>
+        </div>
+        <div class="form-grid cols-3 mt-16">
+          <div class="field-group">
+            <label class="field-label">Consultor</label>
+            <input type="text" class="field-input" id="fConsultor" placeholder="Consultor">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Pessoa de Contato</label>
+            <input type="text" class="field-input" id="fContato" placeholder="Pessoa de contato">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Qtd. Total de Volumes</label>
+            <input type="text" class="field-input" id="fVolumesTotal" placeholder="—">
+          </div>
+        </div>
+        <div class="alert-box warn" id="cadastroNaoEncontrado">CNPJ não localizado na base de cadastro. Preencha os campos manualmente.</div>
+      </div>
+    </div>
+
+    <!-- Card: coleta e rastreio -->
+    <div class="form-card" id="coletaCard" style="display:none;">
+      <div class="form-card-header">
+        <div class="form-card-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/>
+            <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+          </svg>
+        </div>
+        <div class="form-card-header-text">
+          <h3>Coleta e Rastreio</h3>
+          <p>1 Nº de coleta por formulário · 1 código de rastreio por volume.</p>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="form-grid cols-3">
+          <div class="field-group">
+            <label class="field-label">Nº da Coleta (Correios)</label>
+            <input type="text" class="field-input" id="fNumeroColeta" placeholder="Nº da coleta">
+          </div>
+        </div>
+        <div class="nf-table-wrap mt-16">
+          <table class="nf-table">
+            <thead>
+              <tr>
+                <th>NF</th>
+                <th>Volume</th>
+                <th>Código de Rastreio</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="volumeTableBody"></tbody>
+          </table>
+        </div>
+        <div class="nf-empty" id="volumeEmpty">Nenhum volume identificado. Importe o PDF ou adicione uma linha manualmente.</div>
+        <button class="btn btn-secondary btn-sm mt-16" id="btnAddVolumeRow">+ Adicionar volume manual</button>
+      </div>
+    </div>
+
+    <!-- Card: itens (NF / PN / Descrição / Qtd) -->
+    <div class="form-card" id="nfCard" style="display:none;">
+      <div class="form-card-header">
+        <div class="form-card-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </div>
+        <div class="form-card-header-text">
+          <h3>Itens da Solicitação</h3>
+          <p>Uma linha por PN, agrupado por NF.</p>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="nf-table-wrap">
+          <table class="nf-table">
+            <thead>
+              <tr>
+                <th>NF</th>
+                <th>Volumes</th>
+                <th>PN</th>
+                <th>Descrição</th>
+                <th>Qtd</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="nfTableBody"></tbody>
+          </table>
+        </div>
+        <div class="nf-empty" id="nfEmpty">Nenhuma NF identificada. Importe o PDF ou adicione uma linha manualmente.</div>
+        <button class="btn btn-secondary btn-sm mt-16" id="btnAddNfRow">+ Adicionar NF/PN manual</button>
+      </div>
+    </div>
+
+
+    <div class="step-nav" id="captureActions" style="display:none;">
+      <button class="btn btn-ghost" id="btnLimparCaptura">Limpar</button>
+      <button class="btn btn-primary" id="btnSalvarRegistro">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Salvar Registro
+      </button>
+    </div>
+    <div class="alert-box success" id="saveStatus"></div>
+
+  </section>
+
+  <!-- ═══════════════ SEÇÃO: CONSULTA / HISTÓRICO ═══════════════ -->
+  <section id="section-consulta" class="page-section">
+
+    <div class="section-page-title">
+      <h2>Consulta e Histórico</h2>
+      <p>Pesquise registros já salvos no arquivo de histórico.</p>
+    </div>
+
+    <div class="conn-bar" style="grid-template-columns:1fr;">
+      <div class="conn-card">
+        <div class="conn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="conn-info">
+          <div class="conn-label">Arquivo de histórico</div>
+          <div class="conn-status off" id="statusHistoricoConsulta"><span class="dot"></span>Não conectado</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnConectarHistoricoConsulta">Conectar</button>
+        <button class="btn btn-ghost btn-sm" id="btnRecarregarHistorico">Recarregar</button>
+        <button class="btn btn-ghost btn-sm" id="btnRestaurarBackup">Restaurar de um backup…</button>
+      </div>
+    </div>
+
+    <div class="upload-notice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Cada backup diário é uma cópia <strong>completa</strong> do histórico até aquele dia — não são fragmentos por
+      registro. Para restaurar, basta escolher o backup mais recente: ele substitui o arquivo principal e já contém
+      todos os dados anteriores, sem necessidade de compilar nada manualmente.
+    </div>
+
+    <div class="hist-filters">
+      <div class="hist-search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+          <circle cx="11" cy="11" r="7"/><line x1="17" y1="17" x2="22" y2="22"/>
+        </svg>
+        <input class="hist-search" id="histSearch" type="text" placeholder="Buscar por empresa, CNPJ, NF, coleta ou rastreio…">
+      </div>
+      <span class="hist-count" id="histCount"></span>
+    </div>
+
+    <div class="form-card" style="padding:0;overflow:hidden;">
+      <div class="hist-table-wrap">
+        <table class="hist-table" id="histTable">
+          <thead>
+            <tr>
+              <th>Data/Hora</th><th>Empresa</th><th>CNPJ</th><th>Cidade/UF</th>
+              <th>NF</th><th>Volume</th><th>Itens</th><th>Nº Coleta</th><th>Rastreio</th>
+            </tr>
+          </thead>
+          <tbody id="histTableBody"></tbody>
+        </table>
+        <div class="hist-empty" id="histEmpty" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="42" height="42">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <p>Nenhum registro encontrado.</p>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+</main>
+
+<!-- Modal: mapeamento de colunas do Excel -->
+<div class="modal-overlay" id="mappingModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Mapeamento de colunas do cadastro</h3>
+      <p>Confirme quais colunas da planilha correspondem a cada campo.</p>
+    </div>
+    <div class="modal-body" id="mappingBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelarMapeamento">Cancelar</button>
+      <button class="btn btn-primary" id="btnConfirmarMapeamento">Confirmar mapeamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bibliotecas: extração de PDF e leitura de planilhas Excel -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+'use strict';
+
+/* ════════════════════════════════════════════════════════════════
+   Controle de Coletas Correios — app.js
+   Módulos: Nav, IDB (handles), HistoryStore, CadastroStore,
+            PdfExtractor, Capture (UI), Consulta (UI)
+   ════════════════════════════════════════════════════════════════ */
+
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
+
+const FS_SUPPORTED = 'showSaveFilePicker' in window && 'showDirectoryPicker' in window;
+
+/* ── Navegação entre seções ── */
+const Nav = (() => {
+  function show(id) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('section-' + id).classList.add('active');
+    document.querySelector(`.nav-item[data-section="${id}"]`).classList.add('active');
+    if (id === 'consulta') Consulta.render();
+  }
+  function init() {
+    document.querySelectorAll('.nav-item[data-section]').forEach(b => {
+      b.addEventListener('click', () => show(b.dataset.section));
+    });
+  }
+  return { init, show };
+})();
+
+/* ── IndexedDB: persistência de FileSystemHandle entre sessões ── */
+const IDB = (() => {
+  let dbPromise = null;
+  function db() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open('controleColetasDB', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('handles');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+  async function set(key, value) {
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const tx = d.transaction('handles', 'readwrite');
+      tx.objectStore('handles').put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function get(key) {
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const tx = d.transaction('handles', 'readonly');
+      const req = tx.objectStore('handles').get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  return { set, get };
+})();
+
+async function ensureRWPermission(handle) {
+  const opts = { mode: 'readwrite' };
+  if ((await handle.queryPermission(opts)) === 'granted') return true;
+  return (await handle.requestPermission(opts)) === 'granted';
+}
+
+/* ── Utilitários CSV ── */
+const CSV_HEADER = ['DataHoraRegistro','Empresa','CNPJ','Cidade','UF','CategoriaCliente','Consultor',
+  'PessoaContato','TipoEnvio','NF','VolumeIndice','Itens','QtdVolumesTotal','NumeroColeta','CodigoRastreio','ArquivoOrigemPDF'];
+
+function csvEscape(v) {
+  v = (v === null || v === undefined) ? '' : String(v);
+  if (/[",\n;]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+  return v;
+}
+function rowsToCsv(rows) {
+  const lines = [CSV_HEADER.join(';')];
+  rows.forEach(r => lines.push(CSV_HEADER.map(h => csvEscape(r[h])).join(';')));
+  return lines.join('\r\n') + '\r\n';
+}
+function parseCsv(text) {
+  if (!text || !text.trim()) return [];
+  const lines = text.replace(/^\uFEFF/, '').split(/\r\n|\n/).filter(l => l.length);
+  if (!lines.length) return [];
+  const header = splitCsvLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const cells = splitCsvLine(line);
+    const obj = {};
+    header.forEach((h, i) => obj[h] = cells[i] !== undefined ? cells[i] : '');
+    return obj;
+  });
+}
+function splitCsvLine(line) {
+  const out = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (c === '"') { inQ = false; }
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ';') { out.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+/* ── HistoryStore: leitura/escrita do arquivo de histórico + backup diário ── */
+const HistoryStore = (() => {
+  let fileHandle = null;
+  let fallbackRows = [];
+
+  function loadFallback() {
+    try { fallbackRows = JSON.parse(localStorage.getItem('historico_fallback') || '[]'); }
+    catch (e) { fallbackRows = []; }
+  }
+
+  async function tryReconnect() {
+    if (!FS_SUPPORTED) { loadFallback(); return false; }
+    const handle = await IDB.get('historyFileHandle');
+    if (!handle) return false;
+    if (!(await ensureRWPermission(handle))) return false;
+    fileHandle = handle;
+    return true;
+  }
+
+  async function connect() {
+    if (!FS_SUPPORTED) {
+      alert('Este navegador não suporta gravação direta em arquivo local.\nOs registros serão mantidos neste navegador e você poderá exportar um CSV a qualquer momento.');
+      loadFallback();
+      return true;
+    }
+    try {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: 'historico_coletas.csv',
+        types: [{ description: 'Planilha CSV', accept: { 'text/csv': ['.csv'] } }]
+      });
+      await IDB.set('historyFileHandle', fileHandle);
+      // garante cabeçalho se o arquivo for novo/vazio
+      const existing = await readRaw();
+      if (!existing.trim()) await writeRaw(rowsToCsv([]));
+      return true;
+    } catch (e) {
+      if (e.name !== 'AbortError') console.error(e);
+      return false;
+    }
+  }
+
+  async function readRaw() {
+    if (!fileHandle) return '';
+    const file = await fileHandle.getFile();
+    return await file.text();
+  }
+  async function writeRaw(text) {
+    const w = await fileHandle.createWritable();
+    await w.write(text);
+    await w.close();
+  }
+
+  async function readAll() {
+    if (FS_SUPPORTED && fileHandle) return parseCsv(await readRaw());
+    loadFallback();
+    return fallbackRows.slice();
+  }
+
+  async function appendRows(newRows) {
+    if (FS_SUPPORTED && fileHandle) {
+      const current = parseCsv(await readRaw());
+      const all = current.concat(newRows);
+      await writeRaw(rowsToCsv(all));
+      await maybeBackup(rowsToCsv(all));
+      return;
+    }
+    // modo fallback: localStorage + download do CSV atualizado
+    loadFallback();
+    fallbackRows = fallbackRows.concat(newRows);
+    localStorage.setItem('historico_fallback', JSON.stringify(fallbackRows));
+    downloadCsv(rowsToCsv(fallbackRows), 'historico_coletas.csv');
+  }
+
+  function downloadCsv(text, name) {
+    const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function maybeBackup(fullCsvText) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem('lastBackupDate') === today) return;
+    try {
+      let dirHandle = await IDB.get('backupDirHandle');
+      if (!dirHandle) {
+        alert('Vamos configurar a pasta de backup automático diário.\nSelecione uma pasta (idealmente sincronizada, ex: OneDrive/SharePoint).');
+        dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        await IDB.set('backupDirHandle', dirHandle);
+      }
+      if (!(await ensureRWPermission(dirHandle))) return;
+      const backupHandle = await dirHandle.getFileHandle(`backup_historico_${today}.csv`, { create: true });
+      const w = await backupHandle.createWritable();
+      await w.write(fullCsvText);
+      await w.close();
+      localStorage.setItem('lastBackupDate', today);
+    } catch (e) {
+      console.warn('Backup automático não realizado:', e);
+    }
+  }
+
+  /* Promove um arquivo de backup (cópia completa) a arquivo principal. */
+  async function restoreFromBackup() {
+    if (!FS_SUPPORTED) {
+      alert('Restauração automática requer Edge/Chrome. Abra o backup no Explorer e renomeie-o manualmente para historico_coletas.csv.');
+      return false;
+    }
+    if (!fileHandle) { alert('Conecte o arquivo de histórico principal primeiro.'); return false; }
+    const [backupHandle] = await window.showOpenFilePicker({
+      types: [{ description: 'Backup CSV', accept: { 'text/csv': ['.csv'] } }]
+    });
+    const backupFile = await backupHandle.getFile();
+    const backupText = await backupFile.text();
+    const backupRows = parseCsv(backupText);
+    if (!backupRows.length) { alert('O backup selecionado está vazio ou inválido.'); return false; }
+    if (!confirm(`O backup "${backupFile.name}" contém ${backupRows.length} registro(s) e vai SUBSTITUIR o arquivo principal atual. Continuar?`)) return false;
+    await writeRaw(rowsToCsv(backupRows));
+    return true;
+  }
+
+  function isConnected() { return FS_SUPPORTED ? !!fileHandle : true; }
+  function mode() { return FS_SUPPORTED ? 'arquivo local' : 'navegador (fallback)'; }
+
+  return { tryReconnect, connect, readAll, appendRows, restoreFromBackup, isConnected, mode };
+})();
+
+/* ── CadastroStore: base de cadastro (Excel) indexada por CNPJ ── */
+const CadastroStore = (() => {
+  let indexByCnpj = new Map();
+  let headers = [];
+  let mapping = null;
+  let loaded = false;
+
+  function normCnpj(v) { return String(v || '').replace(/\D/g, ''); }
+  function normHeader(h) {
+    return String(h || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
+
+  function autoDetect(hdrs) {
+    const norm = hdrs.map(normHeader);
+    const find = (...keys) => {
+      for (const k of keys) {
+        const idx = norm.findIndex(h => h.includes(k));
+        if (idx !== -1) return hdrs[idx];
+      }
+      return '';
+    };
+    return {
+      cnpj: find('cnpj'),
+      razaoSocial: find('razao social', 'razao', 'empresa', 'cliente'),
+      cidade: find('cidade'),
+      uf: find('uf', 'estado'),
+      categoria: find('categoria'),
+      consultor: find('consultor')
+    };
+  }
+
+  async function pickFile() {
+    if ('showOpenFilePicker' in window) {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'Planilha Excel', accept: { 'application/vnd.ms-excel': ['.xlsx', '.xls'] } }]
+      });
+      await IDB.set('cadastroFileHandle', handle);
+      return await handle.getFile();
+    }
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = '.xlsx,.xls';
+      input.onchange = () => input.files[0] ? resolve(input.files[0]) : reject(new Error('cancelado'));
+      input.click();
+    });
+  }
+
+  async function tryReconnect() {
+    if (!('showOpenFilePicker' in window)) return false;
+    const handle = await IDB.get('cadastroFileHandle');
+    if (!handle) return false;
+    if ((await handle.queryPermission({ mode: 'read' })) !== 'granted') {
+      if ((await handle.requestPermission({ mode: 'read' })) !== 'granted') return false;
+    }
+    const file = await handle.getFile();
+    await loadWorkbookFromFile(file);
+    return true;
+  }
+
+  async function loadWorkbookFromFile(file) {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    if (!json.length) throw new Error('Planilha vazia');
+    headers = Object.keys(json[0]);
+    const stored = localStorage.getItem('cadastroMapping_v1');
+    let map = stored ? JSON.parse(stored) : null;
+    const detected = autoDetect(headers);
+    if (!map || !headers.includes(map.cnpj)) map = detected;
+    if (!map.cnpj) {
+      await askMapping(map, json);
+    } else {
+      mapping = map;
+      buildIndex(json);
+    }
+  }
+
+  function buildIndex(json) {
+    indexByCnpj = new Map();
+    json.forEach(row => {
+      const key = normCnpj(row[mapping.cnpj]);
+      if (key) indexByCnpj.set(key, row);
+    });
+    loaded = true;
+    localStorage.setItem('cadastroMapping_v1', JSON.stringify(mapping));
+  }
+
+  function askMapping(prefill, json) {
+    return new Promise(resolve => {
+      const body = document.getElementById('mappingBody');
+      const fields = [
+        ['cnpj', 'CNPJ (obrigatório)'],
+        ['razaoSocial', 'Razão Social'],
+        ['cidade', 'Cidade'],
+        ['uf', 'UF'],
+        ['categoria', 'Categoria de Cliente'],
+        ['consultor', 'Consultor']
+      ];
+      body.innerHTML = fields.map(([key, label]) => `
+        <div class="field-group">
+          <label class="field-label">${label}</label>
+          <select class="field-select" data-map="${key}">
+            <option value="">— não mapear —</option>
+            ${headers.map(h => `<option value="${h}" ${prefill[key] === h ? 'selected' : ''}>${h}</option>`).join('')}
+          </select>
+        </div>`).join('');
+      const modal = document.getElementById('mappingModal');
+      modal.classList.add('open');
+      document.getElementById('btnConfirmarMapeamento').onclick = () => {
+        const map = {};
+        body.querySelectorAll('select[data-map]').forEach(sel => map[sel.dataset.map] = sel.value);
+        if (!map.cnpj) { alert('Selecione a coluna de CNPJ.'); return; }
+        mapping = map;
+        buildIndex(json);
+        modal.classList.remove('open');
+        resolve();
+      };
+      document.getElementById('btnCancelarMapeamento').onclick = () => {
+        modal.classList.remove('open');
+        resolve();
+      };
+    });
+  }
+
+  async function connect() {
+    const file = await pickFile();
+    await loadWorkbookFromFile(file);
+  }
+
+  function lookup(cnpjRaw) {
+    if (!loaded) return null;
+    const row = indexByCnpj.get(normCnpj(cnpjRaw));
+    if (!row) return null;
+    return {
+      razaoSocial: mapping.razaoSocial ? row[mapping.razaoSocial] : '',
+      cidade: mapping.cidade ? row[mapping.cidade] : '',
+      uf: mapping.uf ? row[mapping.uf] : '',
+      categoria: mapping.categoria ? row[mapping.categoria] : '',
+      consultor: mapping.consultor ? row[mapping.consultor] : ''
+    };
+  }
+
+  function isLoaded() { return loaded; }
+
+  return { connect, tryReconnect, lookup, isLoaded };
+})();
+
+/* ── PdfExtractor: extração de texto (pdf.js) + parsing do template "Resumo" ── */
+const PdfExtractor = (() => {
+  async function extractLines(file) {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const allLines = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      const groups = new Map();
+      content.items.forEach(item => {
+        const y = Math.round(item.transform[5]);
+        const x = item.transform[4];
+        if (!groups.has(y)) groups.set(y, []);
+        groups.get(y).push({ x, w: item.width || 0, str: item.str });
+      });
+      const ys = Array.from(groups.keys()).sort((a, b) => b - a);
+      ys.forEach(y => {
+        const items = groups.get(y).sort((a, b) => a.x - b.x);
+        // insere espaço apenas quando há um vão real entre os runs de texto
+        // (evita quebrar códigos/PNs numéricos em pedaços artificiais)
+        let line = '';
+        let prevEnd = null;
+        items.forEach(it => {
+          if (prevEnd !== null && it.x - prevEnd > 1.5) line += ' ';
+          line += it.str;
+          prevEnd = it.x + it.w;
+        });
+        allLines.push(line.replace(/\s+/g, ' ').trim());
+      });
+    }
+    return allLines.filter(l => l.length);
+  }
+
+  function parseResumo(lines) {
+    const text = lines.join('\n');
+    const grab = re => { const m = text.match(re); return m ? m[1].trim() : ''; };
+
+    const empresa = grab(/Empresa:\s*([^\n]+)/i);
+    const cnpj = grab(/CNPJ:\s*([\d.\/\-]{14,18})/i);
+    const contato = grab(/Pessoa de contato:\s*([^\n]+)/i);
+    const tipoEnvio = grab(/Tipo de Envio:\s*([^\n]+)/i);
+    const volumesTotal = grab(/Quantidade total de Volumes:\s*(\d+)/i);
+
+    const nfs = [];
+    const nfRe = /NF\s*(\d+):\s*(\d+)\s*volume/gi;
+    let m;
+    while ((m = nfRe.exec(text)) !== null) {
+      nfs.push({ nf: m[1], volumes: m[2] });
+    }
+
+    const itensPorNf = parseDetalhamento(lines);
+    nfs.forEach(n => { n.itens = itensPorNf.get(n.nf) || []; });
+
+    return { empresa, cnpj, contato, tipoEnvio, volumesTotal, nfs };
+  }
+
+  /* Tabela "Detalhamento": NF · Tipo de produto · Código (PN) · Qtd */
+  function parseDetalhamento(lines) {
+    const start = lines.findIndex(l => /Detalhamento:/i.test(l));
+    const itensPorNf = new Map();
+    if (start === -1) return itensPorNf;
+    const rowRe = /^(\d{2,10})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9()./\-\s]*?)\s+([\d]{4,}(?:\s+\d{2,})?)\s+(\d{1,4})$/;
+    for (let i = start + 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (/Exportar PDF/i.test(line)) break;
+      const m = line.match(rowRe);
+      if (!m) continue;
+      const [, nf, descricao, codigoRaw, qtd] = m;
+      const codigo = codigoRaw.replace(/\s+/g, '');
+      if (!itensPorNf.has(nf)) itensPorNf.set(nf, []);
+      itensPorNf.get(nf).push({ codigo, descricao: descricao.trim(), qtd });
+    }
+    return itensPorNf;
+  }
+
+  return { extractLines, parseResumo };
+})();
+
+/* ── Capture: UI da tela "Nova Captura" ── */
+const Capture = (() => {
+  let currentPdfName = '';
+  let itemRows = [];    // grão: NF + PN (produtos)
+  let volumeRows = [];  // grão: NF + volume (1 rastreio por volume)
+
+  function setStatus(id, msg, type) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'alert-box' + (type ? ' ' + type : '') + (msg ? ' visible' : '');
+  }
+
+  function itensTextoPorNf(nf) {
+    return itemRows.filter(r => r.nf === nf && (r.pn || r.descricao))
+      .map(r => `${r.pn || '—'} ${r.descricao ? '- ' + r.descricao : ''} ${r.qtd ? '(Qtd ' + r.qtd + ')' : ''}`.trim())
+      .join(' | ');
+  }
+
+  function renderItemTable() {
+    const body = document.getElementById('nfTableBody');
+    const empty = document.getElementById('nfEmpty');
+    body.innerHTML = '';
+    empty.style.display = itemRows.length ? 'none' : 'block';
+    itemRows.forEach((row, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input class="field-input" style="width:80px" value="${row.nf}" data-f="nf" data-i="${idx}"></td>
+        <td><input class="field-input" style="width:60px" value="${row.volumes}" data-f="volumes" data-i="${idx}"></td>
+        <td><input class="field-input" style="width:120px" value="${row.pn || ''}" data-f="pn" data-i="${idx}" placeholder="Código/PN"></td>
+        <td><input class="field-input" style="width:220px" value="${row.descricao || ''}" data-f="descricao" data-i="${idx}" placeholder="Descrição"></td>
+        <td><input class="field-input" style="width:60px" value="${row.qtd || ''}" data-f="qtd" data-i="${idx}" placeholder="Qtd"></td>
+        <td><button class="btn-icon-remove" data-remove="${idx}" title="Remover linha">✕</button></td>`;
+      body.appendChild(tr);
+    });
+    body.querySelectorAll('input[data-f]').forEach(inp => {
+      inp.addEventListener('input', () => { itemRows[inp.dataset.i][inp.dataset.f] = inp.value; });
+    });
+    body.querySelectorAll('[data-remove]').forEach(btn => {
+      btn.addEventListener('click', () => { itemRows.splice(Number(btn.dataset.remove), 1); renderItemTable(); });
+    });
+    document.getElementById('nfCard').style.display = 'block';
+    document.getElementById('captureActions').style.display = 'flex';
+  }
+
+  function renderVolumeTable() {
+    const body = document.getElementById('volumeTableBody');
+    const empty = document.getElementById('volumeEmpty');
+    body.innerHTML = '';
+    empty.style.display = volumeRows.length ? 'none' : 'block';
+    volumeRows.forEach((row, idx) => {
+      const tr = document.createElement('tr');
+      const rotulo = row.volTotal > 1 ? `${row.volIndex} de ${row.volTotal}` : `1 de 1`;
+      tr.innerHTML = `
+        <td><input class="field-input" style="width:80px" value="${row.nf}" data-vf="nf" data-vi="${idx}"></td>
+        <td style="white-space:nowrap;">${rotulo}</td>
+        <td><input class="field-input" style="width:200px" value="${row.rastreio}" data-vf="rastreio" data-vi="${idx}" placeholder="Código de rastreio"></td>
+        <td><button class="btn-icon-remove" data-vremove="${idx}" title="Remover linha">✕</button></td>`;
+      body.appendChild(tr);
+    });
+    body.querySelectorAll('input[data-vf]').forEach(inp => {
+      inp.addEventListener('input', () => { volumeRows[inp.dataset.vi][inp.dataset.vf] = inp.value; });
+    });
+    body.querySelectorAll('[data-vremove]').forEach(btn => {
+      btn.addEventListener('click', () => { volumeRows.splice(Number(btn.dataset.vremove), 1); renderVolumeTable(); });
+    });
+    document.getElementById('coletaCard').style.display = 'block';
+    document.getElementById('captureActions').style.display = 'flex';
+  }
+
+  function fillClienteFields(data) {
+    document.getElementById('fEmpresa').value = data.razaoSocial || '';
+    document.getElementById('fCidade').value = data.cidade || '';
+    document.getElementById('fUf').value = data.uf || '';
+    document.getElementById('fCategoria').value = data.categoria || '';
+    document.getElementById('fConsultor').value = data.consultor || '';
+    ['fEmpresa','fCidade','fUf','fCategoria','fConsultor'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.toggle('auto-filled', !!el.value);
+    });
+  }
+
+  async function handlePdf(file) {
+    currentPdfName = file.name;
+    setStatus('pdfExtractStatus', 'Extraindo dados do PDF, aguarde…', 'info');
+    document.getElementById('pdfZone').classList.add('has-file');
+    document.getElementById('pdfPromptLabel').textContent = file.name;
+    document.getElementById('pdfPromptSub').textContent = 'Clique para substituir o arquivo';
+    try {
+      const lines = await PdfExtractor.extractLines(file);
+      document.getElementById('rawTextBox').style.display = 'block';
+      document.getElementById('rawTextContent').textContent = lines.join('\n');
+
+      const parsed = PdfExtractor.parseResumo(lines);
+      document.getElementById('dadosCard').style.display = 'block';
+      document.getElementById('fEmpresa').value = parsed.empresa || '';
+      document.getElementById('fCnpj').value = parsed.cnpj || '';
+      document.getElementById('fContato').value = parsed.contato || '';
+      document.getElementById('fVolumesTotal').value = parsed.volumesTotal || '';
+      ['fEmpresa','fCnpj','fContato','fVolumesTotal'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.toggle('auto-filled', !!el.value);
+      });
+
+      const nfList = parsed.nfs.length ? parsed.nfs : [{ nf: '', volumes: '' }];
+
+      itemRows = [];
+      nfList.forEach(n => {
+        const itens = n.itens && n.itens.length ? n.itens : [{ codigo: '', descricao: '', qtd: '' }];
+        itens.forEach(it => {
+          itemRows.push({ nf: n.nf, volumes: n.volumes, pn: it.codigo, descricao: it.descricao, qtd: it.qtd });
+        });
+      });
+      renderItemTable();
+
+      volumeRows = [];
+      nfList.forEach(n => {
+        const total = parseInt(n.volumes, 10) || 1;
+        for (let i = 1; i <= total; i++) {
+          volumeRows.push({ nf: n.nf, volIndex: i, volTotal: total, rastreio: '' });
+        }
+      });
+      renderVolumeTable();
+
+      const cad = parsed.cnpj ? CadastroStore.lookup(parsed.cnpj) : null;
+      const cadastroWarn = document.getElementById('cadastroNaoEncontrado');
+      if (CadastroStore.isLoaded() && parsed.cnpj) {
+        if (cad) { fillClienteFields(cad); cadastroWarn.classList.remove('visible'); }
+        else cadastroWarn.classList.add('visible');
+      } else {
+        cadastroWarn.classList.remove('visible');
+      }
+
+      setStatus('pdfExtractStatus',
+        parsed.empresa || parsed.cnpj
+          ? 'Dados extraídos com sucesso. Confira os campos abaixo antes de salvar.'
+          : 'Não foi possível identificar automaticamente os campos deste PDF. Preencha manualmente ou confira o texto bruto abaixo.',
+        parsed.empresa || parsed.cnpj ? 'success' : 'warn');
+    } catch (e) {
+      console.error(e);
+      setStatus('pdfExtractStatus', 'Falha ao ler o PDF: ' + e.message, 'error');
+    }
+  }
+
+  function clearAll() {
+    ['fEmpresa','fCnpj','fCidade','fUf','fCategoria','fConsultor','fContato','fVolumesTotal','fNumeroColeta'].forEach(id => {
+      const el = document.getElementById(id); el.value = ''; el.classList.remove('auto-filled');
+    });
+    itemRows = [];
+    volumeRows = [];
+    renderItemTable();
+    renderVolumeTable();
+    document.getElementById('dadosCard').style.display = 'none';
+    document.getElementById('nfCard').style.display = 'none';
+    document.getElementById('coletaCard').style.display = 'none';
+    document.getElementById('captureActions').style.display = 'none';
+    document.getElementById('pdfZone').classList.remove('has-file');
+    document.getElementById('pdfPromptLabel').textContent = 'Arraste o PDF aqui ou clique para selecionar';
+    document.getElementById('pdfPromptSub').textContent = 'Apenas arquivos .pdf';
+    setStatus('pdfExtractStatus', '');
+    setStatus('saveStatus', '');
+    document.getElementById('rawTextBox').style.display = 'none';
+    currentPdfName = '';
+  }
+
+  async function save() {
+    const rowsFilled = volumeRows.filter(r => r.nf || r.rastreio);
+    if (!rowsFilled.length) { alert('Preencha pelo menos um volume antes de salvar.'); return; }
+    const numeroColeta = document.getElementById('fNumeroColeta').value;
+    const pending = rowsFilled.filter(r => !r.rastreio);
+    if (!numeroColeta && !confirm('O Nº da Coleta está em branco. Salvar mesmo assim?')) return;
+    if (pending.length && !confirm(`${pending.length} volume(s) sem código de rastreio. Salvar mesmo assim?`)) return;
+
+    const now = new Date().toLocaleString('pt-BR');
+    const base = {
+      Empresa: document.getElementById('fEmpresa').value,
+      CNPJ: document.getElementById('fCnpj').value,
+      Cidade: document.getElementById('fCidade').value,
+      UF: document.getElementById('fUf').value,
+      CategoriaCliente: document.getElementById('fCategoria').value,
+      Consultor: document.getElementById('fConsultor').value,
+      PessoaContato: document.getElementById('fContato').value,
+      TipoEnvio: 'Solicitação de Coleta',
+      QtdVolumesTotal: document.getElementById('fVolumesTotal').value,
+      NumeroColeta: numeroColeta,
+      ArquivoOrigemPDF: currentPdfName
+    };
+    const records = rowsFilled.map(r => Object.assign({}, base, {
+      DataHoraRegistro: now, NF: r.nf, VolumeIndice: `${r.volIndex}/${r.volTotal}`,
+      Itens: itensTextoPorNf(r.nf), CodigoRastreio: r.rastreio
+    }));
+
+    try {
+      await HistoryStore.appendRows(records);
+      setStatus('saveStatus', `${records.length} registro(s) salvo(s) com sucesso (${HistoryStore.mode()}).`, 'success');
+      clearAll();
+    } catch (e) {
+      console.error(e);
+      setStatus('saveStatus', 'Erro ao salvar: ' + e.message, 'error');
+    }
+  }
+
+  function init() {
+    const zone = document.getElementById('pdfZone');
+    const input = document.getElementById('pdfInput');
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type === 'application/pdf') handlePdf(file);
+    });
+    input.addEventListener('change', () => { if (input.files[0]) handlePdf(input.files[0]); });
+
+    document.getElementById('btnAddNfRow').addEventListener('click', () => {
+      itemRows.push({ nf: '', volumes: '', pn: '', descricao: '', qtd: '' });
+      renderItemTable();
+    });
+    document.getElementById('btnAddVolumeRow').addEventListener('click', () => {
+      volumeRows.push({ nf: '', volIndex: 1, volTotal: 1, rastreio: '' });
+      renderVolumeTable();
+    });
+    document.getElementById('btnLimparCaptura').addEventListener('click', () => {
+      if (confirm('Limpar todos os dados desta captura?')) clearAll();
+    });
+    document.getElementById('btnSalvarRegistro').addEventListener('click', save);
+
+    document.getElementById('btnConectarHistorico').addEventListener('click', async () => {
+      const ok = await HistoryStore.connect();
+      updateConnStatus();
+      if (ok) setStatus('saveStatus', 'Arquivo de histórico conectado.', 'success');
+    });
+    document.getElementById('btnConectarCadastro').addEventListener('click', async () => {
+      try {
+        await CadastroStore.connect();
+        updateConnStatus();
+      } catch (e) { console.error(e); }
+    });
+  }
+
+  function updateConnStatus() {
+    const h = document.getElementById('statusHistorico');
+    h.className = 'conn-status ' + (HistoryStore.isConnected() ? 'on' : 'off');
+    h.innerHTML = `<span class="dot"></span>${HistoryStore.isConnected() ? 'Conectado (' + HistoryStore.mode() + ')' : 'Não conectado'}`;
+
+    const c = document.getElementById('statusCadastro');
+    c.className = 'conn-status ' + (CadastroStore.isLoaded() ? 'on' : 'off');
+    c.innerHTML = `<span class="dot"></span>${CadastroStore.isLoaded() ? 'Base carregada' : 'Não carregada'}`;
+  }
+
+  return { init, updateConnStatus };
+})();
+
+/* ── Consulta: UI da tela de Histórico ── */
+const Consulta = (() => {
+  let rows = [];
+
+  async function load() {
+    rows = await HistoryStore.readAll();
+    render();
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const el = document.getElementById('statusHistoricoConsulta');
+    el.className = 'conn-status ' + (HistoryStore.isConnected() ? 'on' : 'off');
+    el.innerHTML = `<span class="dot"></span>${HistoryStore.isConnected() ? 'Conectado (' + HistoryStore.mode() + ')' : 'Não conectado'}`;
+  }
+
+  function render() {
+    const q = (document.getElementById('histSearch').value || '').toLowerCase();
+    const filtered = rows.filter(r => !q || Object.values(r).some(v => String(v).toLowerCase().includes(q)));
+    const body = document.getElementById('histTableBody');
+    const empty = document.getElementById('histEmpty');
+    body.innerHTML = '';
+    document.getElementById('histCount').textContent = `${filtered.length} de ${rows.length} registro(s)`;
+    empty.style.display = filtered.length ? 'none' : 'block';
+    filtered.slice().reverse().forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.DataHoraRegistro || ''}</td>
+        <td>${r.Empresa || ''}</td>
+        <td>${r.CNPJ || ''}</td>
+        <td>${[r.Cidade, r.UF].filter(Boolean).join('/')}</td>
+        <td>${r.NF || ''}</td>
+        <td>${r.VolumeIndice || ''}</td>
+        <td>${r.Itens || ''}</td>
+        <td>${r.NumeroColeta || ''}</td>
+        <td class="hist-td-rastreio">${r.CodigoRastreio || ''}</td>`;
+      body.appendChild(tr);
+    });
+  }
+
+  function init() {
+    document.getElementById('histSearch').addEventListener('input', render);
+    document.getElementById('btnRecarregarHistorico').addEventListener('click', load);
+    document.getElementById('btnConectarHistoricoConsulta').addEventListener('click', async () => {
+      const ok = await HistoryStore.connect();
+      Capture.updateConnStatus();
+      if (ok) load();
+    });
+    document.getElementById('btnRestaurarBackup').addEventListener('click', async () => {
+      try {
+        const restored = await HistoryStore.restoreFromBackup();
+        if (restored) { alert('Histórico restaurado com sucesso a partir do backup selecionado.'); load(); }
+      } catch (e) {
+        if (e.name !== 'AbortError') { console.error(e); alert('Erro ao restaurar backup: ' + e.message); }
+      }
+    });
+  }
+
+  return { init, render, load };
+})();
+
+/* ── Boot ── */
+(async function init() {
+  Nav.init();
+  Capture.init();
+  Consulta.init();
+  await HistoryStore.tryReconnect();
+  await CadastroStore.tryReconnect().catch(() => {});
+  Capture.updateConnStatus();
+})();
+</script>
+</body>
+</html>
