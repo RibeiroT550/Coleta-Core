@@ -1,7 +1,11 @@
 # Especificações — Coleta Core
 
 > Documento vivo. A Parte 1 descreve o que o protótipo (`index.html`) já implementa e como.
-> A Parte 2 lista lacunas e decisões em aberto que precisamos fechar antes de evoluir o código.
+> A Parte 2 registra a primeira tentativa de arquitetura (app HTML falando direto com o
+> SharePoint) — **superada pela Parte 3** depois que esbarramos no bloqueio de autenticação por
+> operador (ver 2.11/2.12) e decidimos usar n8n como intermediário. Os pontos de dados/UI da
+> Parte 2 que não mudaram (modelo de dados, identificação do operador, dashboard, exportação,
+> robustez do parser) continuam válidos e são referenciados pela Parte 3, não duplicados.
 
 ## Parte 1 — Estado atual (engenharia reversa do protótipo)
 
@@ -373,3 +377,106 @@ esse launcher: abra o **PowerShell** (menu iniciar → digite "PowerShell") e ro
 `Write-Host "teste ok"` — se aparecer `teste ok` na tela, funciona; se der erro de política/bloqueio,
 me avise que busco uma alternativa (ex. pedir para o TI liberar isso especificamente, ou empacotar
 de outra forma).
+
+---
+
+## Parte 3 — Pivô: n8n como intermediário (arquitetura final proposta)
+
+### 3.0 Por que mudar
+
+A Parte 2 tentava fazer o navegador de cada operador falar **diretamente** com o SharePoint. Isso
+esbarrou em dois bloqueios reais e testados (2.11): hospedar o app dentro do SharePoint não
+funciona (sandbox `blob:` por segurança), e autenticação via MSAL exigiria login interativo por
+operador contra um App registration que precisaria rodar num endereço fixo (`http://localhost`),
+o que por sua vez dependia de um launcher local (PowerShell) ainda não validado.
+
+Você já tem uma **instância do n8n rodando** — isso permite inverter o desenho: o navegador do
+operador não fala mais com o SharePoint. Ele fala com um **webhook do n8n**, e é o **n8n quem fala
+com o SharePoint**, do lado do servidor, com uma única credencial de serviço. Isso:
+- Elimina o problema de autenticação por operador (não existe mais "cada um loga no Entra ID").
+- Elimina a necessidade do launcher local/PowerShell (o app HTML volta a poder rodar como arquivo
+  local simples, `file://`, ou de qualquer hospedagem — chamar um webhook HTTPS externo não tem o
+  problema de sandbox que hospedar dentro do SharePoint tinha).
+- Simplifica o pedido ao TI: em vez de um App registration tipo SPA com login interativo e redirect
+  URI, passa a ser um App registration de **serviço** (credenciais de cliente, sem tela de login),
+  mais simples de avaliar e aprovar (ver 3.3).
+- Mantém 100% do trabalho de UI/UX já feito no `index.html` (upload de PDF, tabelas, identidade
+  visual) — só troca o que acontece "por trás" de Salvar/Consultar/Atualizar status.
+
+**O que a Parte 2 definiu e continua valendo, sem mudança** (referenciado, não repetido aqui):
+modelo de dados por Coleta/Volume (2.2), identificação do operador (2.6), conteúdo do Dashboard
+(2.7), exportação para Excel (2.8), robustez do parser de PDF (2.9). O que muda é **como os dados
+trafegam** entre o navegador e o SharePoint.
+
+### 3.1 Arquitetura
+
+```
+┌─────────────────────┐        HTTPS (fetch)        ┌──────────────────┐        Graph API        ┌──────────────────────┐
+│  App HTML (index.html) │ ───────────────────────▶  │   n8n (workflows)  │ ───────────────────────▶ │  SharePoint Lists     │
+│  roda local ou hospedado│ ◀───────────────────────  │  1 credencial de   │ ◀─────────────────────── │  (Coletas + Volumes)  │
+└─────────────────────┘        JSON de resposta       │  serviço (app-only)│                          └──────────────────────┘
+                                                        └──────────────────┘
+```
+
+O app HTML deixa de precisar de qualquer SDK do Microsoft (MSAL, etc.) — só faz `fetch()` comum
+para URLs de webhook do seu n8n. Toda a complexidade de falar com o Graph/SharePoint fica dentro
+dos workflows do n8n.
+
+### 3.2 Workflows do n8n (endpoints que o app vai chamar)
+
+Um workflow n8n por operação, cada um iniciado por um nó **Webhook**:
+
+| Webhook (chamado pelo app) | O que o workflow faz no n8n |
+|---|---|
+| `POST /coleta-criar` | Recebe o registro completo de uma nova captura (2.2); cria 1 item em **Coletas** e N itens em **Volumes** via nó SharePoint/HTTP Request para o Graph. |
+| `GET /coletas-listar` | Lê **Coletas** + **Volumes** (com filtros opcionais na query string: período, CNPJ, status etc.) e devolve JSON já "juntado" para a tela de Consulta/Dashboard. |
+| `PATCH /coleta-atualizar` | Recebe `id` + campos alterados; lê o item atual (pega o `ETag`), aplica o patch com `If-Match` (mesma trava otimista da Parte 2, só que rodando dentro do n8n em vez do navegador). |
+| `DELETE /coleta-excluir` | Marca `Excluido = true` no item (exclusão lógica, igual 2.5). |
+| `POST /status-lote` | Recebe a lista `{codigoRastreio, status, dataStatus}` extraída do Excel dos Correios (o parsing do Excel continua no navegador, com `xlsx.js`, como hoje); localiza cada item em **Volumes** por `CodigoRastreio` e atualiza. |
+
+### 3.3 Autenticação n8n ↔ SharePoint (pedido ao TI simplificado)
+
+Em vez do App registration tipo **SPA** da Parte 2 (2.12), agora é um App registration tipo
+**serviço** (client credentials / app-only) — sem tela de login, sem redirect URI:
+
+> Preciso que seja criado um **App registration** no Entra ID (Azure AD), tipo aplicação
+> **"Web"** (não SPA), para um serviço de automação (n8n) de controle de coletas dos Correios.
+>
+> - **Client secret**: gerado para esse app (vou guardar como credencial dentro do n8n).
+> - **Permissão de API solicitada**: Microsoft Graph → `Sites.Selected`, tipo **Application**
+>   (não Delegated) — com **consentimento de administrador**.
+> - Depois de criado, preciso que o administrador **conceda esse app acesso apenas ao site do
+>   SharePoint onde está a Lista "Teste"** (via `Sites.Selected`).
+> - Ao final, preciso do **Application (client) ID**, **Directory (tenant) ID** e do **client
+>   secret** gerado — para configurar como credencial no n8n.
+
+Isso é mais simples de aprovar do que o pedido da Parte 2: não há tela de consentimento por
+usuário nem redirect URI para validar — é uma credencial de servidor, usada só pelos workflows do
+n8n.
+
+### 3.4 Segurança do webhook
+
+Como o webhook do n8n fica exposto (qualquer um com a URL poderia chamá-lo), cada workflow deve
+exigir autenticação simples do lado do app: um cabeçalho (`Authorization` ou um header próprio,
+ex. `X-Coleta-Core-Key`) com uma chave fixa configurada tanto no app quanto no n8n (n8n suporta
+isso nativamente na configuração do nó Webhook, sem precisar programar nada a mais). O app guarda
+essa chave em `localStorage`, pedida uma vez na configuração inicial — mesmo padrão já usado para
+o usuário corporativo (2.6).
+
+### 3.5 Perguntas em aberto (rodada n8n)
+
+1. **Nó Microsoft SharePoint do n8n**: preciso confirmar, dentro do seu n8n, se o tipo de
+   credencial "Microsoft SharePoint"/"Microsoft OAuth2" aceita o fluxo **client credentials**
+   (app-only, sem login interativo) ou se por padrão só oferece OAuth2 delegado (com tela de
+   login). Se só oferecer o delegado, pode ser necessário usar um nó **HTTP Request** genérico
+   dentro do n8n chamando o Graph diretamente com o token obtido via client credentials (mais
+   flexível, funciona de qualquer forma). Consegue abrir o n8n e ver, ao criar uma credencial nova
+   do tipo Microsoft/SharePoint, quais opções de autenticação aparecem?
+2. **Alcance de rede do n8n**: sua instância de n8n consegue fazer chamadas HTTPS de saída para
+   `graph.microsoft.com` (API do Microsoft Graph)? Se for self-hosted atrás de um firewall
+   restritivo, isso precisa estar liberado (é tráfego para domínio da própria Microsoft, então
+   costuma já estar liberado por padrão, mas vale confirmar).
+3. **Onde o app HTML vai rodar**, agora que não depende mais de `localhost`/launcher — volta a
+   fazer sentido considerar hospedar como arquivo local simples (cada operador com sua cópia) ou
+   publicar num link único (GitHub Pages)? Isso não tem mais a complicação de Redirect URI, então
+   a decisão pode ser só sobre praticidade de distribuição/atualização do arquivo.
