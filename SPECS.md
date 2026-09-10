@@ -301,20 +301,19 @@ Tela nova, alimentada por leitura direta das Listas **Coletas** e **Volumes** (2
    vêm nessa planilha (nomes reais das colunas) — assim que houver um exemplo, desenho o
    autodetect de colunas com precisão (hoje é só a suposição `codigoRastreio` + `status` +
    `dataStatus`).
-2. **Autenticação do app contra a Lista (a peça técnica que falta fechar)**: a Lista foi criada no
-   seu espaço pessoal ("My Lists"), não num site de equipe. Preciso decidir entre duas rotas:
-   - **(a) Hospedar o app dentro do próprio SharePoint** (ex. como página/arquivo no mesmo espaço
-     onde a Lista vive) — o navegador reaproveita a sessão já logada do operador (SSO), sem
-     precisar de configuração extra de autenticação. Risco a validar: bibliotecas de documentos do
-     SharePoint às vezes bloqueam execução de `<script>` por política de "custom script" do tenant
-     (você já esbarrou nessa dúvida antes) — preciso testar se isso afeta o cenário de "Lista +
-     app", que é diferente de só hospedar um `.html` solto.
-   - **(b) Hospedar o app em qualquer lugar** (inclusive local) **e autenticar via Microsoft
-     Entra ID / MSAL.js** (login corporativo pop-up, como quando você entra no Outlook/Teams) para
-     obter permissão de chamar a Lista via Microsoft Graph — mais flexível sobre onde o app roda,
-     mas exige registrar um "aplicativo" no Entra ID da empresa (pode precisar de aprovação do TI).
-   - Preciso saber se você tem/consegue acesso para registrar um app no Entra ID (rota b), ou se
-     prefere que eu valide primeiro a rota (a) hospedando dentro do próprio SharePoint.
+2. **Autenticação do app contra a Lista** — **rota (a) testada e descartada**: confirmamos, com um
+   teste real, que o OneDrive/SharePoint renderiza arquivos `.html` enviados por usuário dentro de
+   um `blob:` isolado (sandbox), nunca como página real na origem do site — é bloqueio proposital
+   de segurança do próprio Microsoft 365 (evita HTML malicioso sequestrar a sessão do site), não uma
+   configuração que dá para contornar por fora do app. Ver evidência: ao abrir o arquivo de teste
+   pela web, a URL ficou `blob:https://bosch-my.sharepoint.com/...` e o `fetch` relativo falhou com
+   `is not a valid URL` — o navegador nem considera aquilo uma origem HTTPS de verdade.
+   - **Rota (b) é o caminho**: autenticar via **Microsoft Entra ID + MSAL.js**, chamando a Lista via
+     Microsoft Graph. Testamos se você tem permissão de self-service para criar o "App registration"
+     necessário — **não tem** (tela abre, mas sem permissão para registrar). Isso não bloqueia o
+     projeto, só significa que é preciso um pedido pontual ao TI/administrador do Entra ID — feito
+     uma vez, sem dependência contínua depois disso. O pedido está pronto para envio (ver 2.12).
+
 3. **Site de equipe vs. espaço pessoal**: mesmo com o compartilhamento direto funcionando, faz
    sentido migrar a Lista para um site de equipe formal mais adiante (mais robusto a longo prazo —
    ex. se sua conta pessoal for desativada um dia, o site de equipe não depende dela)? Não bloqueia
@@ -322,3 +321,29 @@ Tela nova, alimentada por leitura direta das Listas **Coletas** e **Volumes** (2
 4. **Volume esperado**: quantas coletas por dia, em média (e nos picos)? Ajuda a dimensionar se
    listagens simples (`GET` com filtro) bastam ou se algum ponto (ex. dashboard com muitos filtros
    cruzados) precisa de views/índices dedicados na Lista desde já.
+5. **Onde o app vai rodar no dia a dia**: isso define o "Redirect URI" do pedido de 2.12 — uma URL
+   pública (ex. GitHub Pages deste repositório, mais prático — todo operador só abre um link), rodar
+   localmente na máquina de cada um (`http://localhost:...`, exige um passo extra por operador), ou
+   outra hospedagem que você já tenha em mente?
+
+### 2.12 Pedido para o TI/administrador do Entra ID (Azure AD)
+
+Configuração única, para viabilizar o app de Controle de Coletas conversar com a Lista do
+SharePoint usando o próprio login corporativo de cada operador (sem senhas/tokens avulsos).
+
+**O que pedir, literalmente:**
+
+> Preciso que seja criado um **App registration** no Entra ID (Azure AD) da empresa, tipo
+> **"Single-page application (SPA)"**, para um app interno de controle de coletas dos Correios.
+>
+> - **Redirect URI**: `<A DEFINIR — ver 2.11, item 5>`
+> - **Permissão de API solicitada**: Microsoft Graph → `Sites.Selected` (delegada).
+> - Depois de criado, preciso que o administrador **conceda esse app acesso apenas ao site do
+>   SharePoint onde está a Lista "Teste"** (usando a permissão `Sites.Selected` — dá acesso só a
+>   esse site específico, não a todos os sites da empresa).
+> - Ao final, preciso receber o **Application (client) ID** e o **Directory (tenant) ID** gerados.
+
+`Sites.Selected` é a opção recomendada porque restringe o acesso do app a **apenas este site**
+(o administrador concede explicitamente); a alternativa mais simples de configurar seria
+`Sites.ReadWrite.All`, mas essa dá acesso a **todos os sites do SharePoint da empresa** — não
+recomendo pedir isso só para o nosso caso de uso.
