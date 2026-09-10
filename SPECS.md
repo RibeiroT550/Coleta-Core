@@ -1,11 +1,12 @@
 # Especificações — Coleta Core
 
 > Documento vivo. A Parte 1 descreve o que o protótipo (`index.html`) já implementa e como.
-> A Parte 2 registra a primeira tentativa de arquitetura (app HTML falando direto com o
-> SharePoint) — **superada pela Parte 3** depois que esbarramos no bloqueio de autenticação por
-> operador (ver 2.11/2.12) e decidimos usar n8n como intermediário. Os pontos de dados/UI da
-> Parte 2 que não mudaram (modelo de dados, identificação do operador, dashboard, exportação,
-> robustez do parser) continuam válidos e são referenciados pela Parte 3, não duplicados.
+> As Partes 2 e 3 documentam duas tentativas de arquitetura com serviços externos (SharePoint via
+> API direta, depois via n8n) — **ambas pausadas** por fricção organizacional de aprovação/acesso,
+> mantidas só como referência histórica. **A Parte 4 é a arquitetura final adotada**: tudo local,
+> sem nenhum serviço externo. Os pontos de dados/UI definidos nas Partes 2/3 que não mudam com essa
+> decisão (modelo de dados, identificação do operador, dashboard, exportação, parser de PDF) são
+> referenciados pela Parte 4, não duplicados.
 
 ## Parte 1 — Estado atual (engenharia reversa do protótipo)
 
@@ -483,3 +484,78 @@ o usuário corporativo (2.6).
 |---|---|---|
 | 1 | Hospedagem do app (link único) | **OneDrive/SharePoint** — testado e confirmado: um arquivo `.html` compartilhado por link consegue chamar um webhook externo do n8n via `fetch` sem problema de CORS (Teste B, HTTP 200). Não precisa de GitHub Pages nem de mudar a visibilidade do repositório de código. |
 | 2 | Conectividade app → n8n | Confirmada (Teste B). |
+
+> **Status da Parte 3: pausada.** A credencial do n8n para o SharePoint expirou, e renová-la para
+> uso produtivo esbarra em um processo de aprovação interno longo (não é uma questão técnica —
+> a Parte 3 funcionaria; é fricção organizacional). Decisão: não vamos mais depender de nenhum
+> serviço externo (GitHub, SharePoint via API, n8n) para a primeira versão. A Parte 4, abaixo, é a
+> arquitetura final adotada — mais simples, 100% local, sem pedido a ninguém de TI.
+
+---
+
+## Parte 4 — Plano final: tudo local, sem serviços externos
+
+### 4.0 Resumo
+
+Voltamos à ideia original, sem os desvios das Partes 2/3: o app roda local, no navegador de cada
+operador, e não fala com nenhuma API externa (nem GitHub, nem SharePoint, nem n8n). O
+compartilhamento dos dados entre operadores é **manual/organizacional** — o time decide, por fora
+do app, onde os arquivos ficam disponíveis para todos (pasta de rede, OneDrive sincronizado, e-mail,
+o que for mais prático) e com que frequência alguém roda a compilação. O app só precisa saber ler e
+escrever arquivos JSON — de onde esses arquivos vêm ou para onde vão depois é decisão de vocês, não
+do software.
+
+**O que continua valendo, sem mudança**, definido nas partes anteriores:
+- Modelo de dados por Coleta → NFs → Itens + Volumes (2.2).
+- Identificação do operador: usuário corporativo, até 7 caracteres (2.6).
+- Conteúdo do Dashboard (2.7) e da exportação para Excel (2.8).
+- Robustez do parser de PDF (2.9).
+- Retenção de snapshots: 60 dias diário, depois 1 por mês (2.3.2 da Parte 2 original).
+
+### 4.1 Como o app grava e lê dados
+
+Usa a **File System Access API** do navegador (Chrome/Edge — já é a mesma API que o protótipo
+atual usa para o CSV de histórico) para:
+- **Escrever 1 arquivo JSON por coleta**, no momento de "Salvar", numa pasta que o operador escolhe
+  uma vez (ex. uma pasta do OneDrive sincronizada localmente, ou uma pasta de rede) — o app lembra
+  essa pasta entre sessões (IndexedDB, como já faz hoje com os `FileSystemHandle`).
+- Nome do arquivo: `coleta_<id-uuid>.json` — o `id` evita colisão de nomes entre operadores
+  diferentes escrevendo "ao mesmo tempo" na mesma pasta (cada um gera um arquivo com nome único).
+- Em navegadores sem File System Access API (fallback já existente hoje): baixa o arquivo JSON
+  normalmente, e o operador arrasta manualmente para a pasta combinada com o time.
+
+### 4.2 Compilação (igual ao desenho original, sem GitHub)
+
+Uma função **"Compilar"** no app, disponível para qualquer operador que tenha acesso de leitura à
+pasta combinada pelo time:
+1. Operador aponta o app (via seletor de pasta) para a pasta onde os JSONs de todo mundo estão.
+2. App lê todos os arquivos `coleta_*.json` (novos) + o `historico_atual.json` mais recente (se
+   existir nessa pasta).
+3. Aplica os registros na ordem em que aparecem (idempotente por `id` — um `id` que já está no
+   histórico não é duplicado se o arquivo aparecer de novo).
+4. Escreve `historico/historico_<AAAA-MM-DD>.json` (snapshot do dia) e atualiza
+   `historico_atual.json` na mesma pasta.
+5. Não move nem apaga os arquivos `coleta_*.json` de origem — isso fica a critério do time (podem
+   arquivar manualmente os já compilados, se quiserem manter a pasta "de entrada" limpa).
+
+Sem trava de concorrência automática (não temos mais a garantia do `ETag`/`sha` de um backend real)
+— **é responsabilidade do time combinar** que só uma pessoa roda "Compilar" por vez, ou aceitar o
+risco de raramente precisar rodar de novo se dois cliques coincidirem (baixo risco na prática, dado
+o volume esperado de uso).
+
+### 4.3 Edição, exclusão e atualização de status
+
+Mesma lógica de eventos da Parte 2 (2.5), só que os arquivos de evento (`update_<uuid>.json`,
+`delete_<uuid>.json`, `status-lote_<uuid>.json`) vão para a **mesma pasta compartilhada
+manualmente**, e são absorvidos pela mesma função "Compilar" do 4.2 — não existe mais distinção
+entre "pasta de eventos" e "pasta de dados", é só uma pasta, e o time decide a organização interna
+se quiser (ex. subpastas por mês).
+
+### 4.4 O que fica com o time, fora do app
+
+- **Onde a pasta compartilhada vive** (rede interna, OneDrive sincronizado, outra ferramenta).
+- **Quem e com que frequência roda "Compilar"** (ex.: uma pessoa designada no fim do dia, ou
+  qualquer um antes de consultar o Dashboard).
+- **Backup dessa pasta** — recomendo fortemente que seja uma pasta com backup/versionamento por
+  fora do app (OneDrive/SharePoint sincronizado já faz isso nativamente) já que o app não tem mais
+  nenhuma camada de proteção "de servidor" por trás.
