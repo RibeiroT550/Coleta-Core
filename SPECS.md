@@ -347,3 +347,29 @@ SharePoint usando o próprio login corporativo de cada operador (sem senhas/toke
 (o administrador concede explicitamente); a alternativa mais simples de configurar seria
 `Sites.ReadWrite.All`, mas essa dá acesso a **todos os sites do SharePoint da empresa** — não
 recomendo pedir isso só para o nosso caso de uso.
+
+**Redirect URI definido**: `http://localhost:5500` — porta fixa (ver 2.13), já que o app vai rodar
+localmente na máquina de cada operador, não numa URL pública.
+
+### 2.13 Execução local sem instalar nada (launcher)
+
+Decisão: como o app vai rodar localmente e as máquinas dos operadores provavelmente não têm
+Python/Node instalado, e MSAL **não aceita `file:///...`** como Redirect URI (só `http://`/`https://`),
+o app precisa ser servido por um mini-servidor local. Solução sem instalação: usar o
+**PowerShell**, que já vem em qualquer Windows corporativo, com a classe `HttpListener` do .NET
+(built-in, sem instalar pacote nenhum) para servir os arquivos do app em `http://localhost:5500`.
+
+Pacote de distribuição para cada operador:
+- `iniciar.bat` — arquivo que a pessoa clica duas vezes; ele chama o PowerShell (com
+  `-ExecutionPolicy Bypass` só para essa execução, sem alterar a política do Windows) para subir o
+  servidor local e abrir o navegador automaticamente na página do app.
+- `servidor.ps1` — o script que sobe o `HttpListener` na porta 5500 e serve os arquivos estáticos
+  da pasta do app (o `index.html` e os demais arquivos).
+
+**Risco a validar**: algumas empresas bloqueiam execução de scripts PowerShell via política de
+grupo/AppLocker, mesmo com `-ExecutionPolicy Bypass` (que só ignora a política de *assinatura* de
+script, não uma política de bloqueio total do PowerShell). Vale um teste rápido antes de eu montar
+esse launcher: abra o **PowerShell** (menu iniciar → digite "PowerShell") e rode o comando
+`Write-Host "teste ok"` — se aparecer `teste ok` na tela, funciona; se der erro de política/bloqueio,
+me avise que busco uma alternativa (ex. pedir para o TI liberar isso especificamente, ou empacotar
+de outra forma).
